@@ -115,6 +115,18 @@ function Bars({ columns, mode }: { columns: Column[]; mode: Mode }) {
                   />
                 ) : null
               )}
+              {c.mid != null && top !== null && (
+                <line
+                  x1={x - 3}
+                  x2={x + barW + 3}
+                  y1={y(c.mid)}
+                  y2={y(c.mid)}
+                  stroke="var(--text)"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  pointerEvents="none"
+                />
+              )}
               {c.outlined && top !== null && (
                 <rect
                   x={x - 3}
@@ -215,10 +227,16 @@ function Legend({ mode }: { mode: Mode }) {
         </>
       )}
       {mode === 'daily' && (
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-0.5 w-3 border-t-2 border-dashed border-slate-400" />
-          Outlook (not available yet)
-        </span>
+        <>
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="h-0.5 w-3 bg-ink" />
+            Most likely
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="h-2.5 w-2.5 rounded-[3px] border border-dashed border-ink-muted bg-slate-300/60" />
+            Forecast range (outlook days fainter)
+          </span>
+        </>
       )}
     </div>
   )
@@ -226,7 +244,7 @@ function Legend({ mode }: { mode: Mode }) {
 
 const NOTES: Record<Mode, string> = {
   hourly: 'Past hours: CPCB official AQI (Measured); dashed outline = official reading missing, shadow estimate shown. Later hours: CAMS forecast (Estimated).',
-  daily: 'Days 1–5: CAMS forecast low–high (Estimated). Days 6–10 need the outlook model (coming later).',
+  daily: 'Bars: likely low–high; dark tick: most likely value. Days 1–5: CAMS forecast (bias-corrected when the model beats raw CAMS). Days 6–10: outlook model, lower confidence. All Estimated.',
   monthly: 'Average daily AQI from stored station data; current month outlined. Months without stored data are left empty.',
 }
 

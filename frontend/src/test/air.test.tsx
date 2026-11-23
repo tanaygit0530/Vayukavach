@@ -41,12 +41,19 @@ describe('AQI chart columns', () => {
 
   it('10 days: outlook days are placeholders', () => {
     const cols = dailyColumns([
-      { date: '2026-11-23', low: 200, high: 270, is_outlook: false, available: true, label: 'estimated' },
-      { date: '2026-11-28', low: null, high: null, is_outlook: true, available: false, label: 'estimated' },
-    ])
-    expect(cols[0]).toMatchObject({ low: 200, value: 270, kind: 'forecast' })
-    expect(cols[1]).toMatchObject({ value: null, kind: 'outlook' })
-    expect(cols[1].tooltip[1]).toBe('Outlook not available yet')
+      { date: '2026-11-23', low: 200, high: 270, median: 240, is_outlook: false, available: true,
+        label: 'estimated', method: 'cams_corrected', model_version: 'v1' },
+      { date: '2026-11-28', low: 180, high: 320, median: 250, is_outlook: true, available: true,
+        label: 'estimated', method: 'outlook', model_version: 'v1' },
+      { date: '2026-11-29', low: null, high: null, median: null, is_outlook: true, available: false,
+        label: 'estimated', method: null, model_version: null },
+    ]) // prettier-ignore
+    expect(cols[0]).toMatchObject({ low: 200, value: 270, mid: 240, kind: 'forecast' })
+    expect(cols[0].tooltip.join(' ')).toContain('corrected with station data')
+    expect(cols[1]).toMatchObject({ low: 180, value: 320, kind: 'outlook' })
+    expect(cols[1].tooltip.join(' ')).toContain('lower confidence')
+    expect(cols[2]).toMatchObject({ value: null, kind: 'outlook' })
+    expect(cols[2].tooltip[1]).toBe('Outlook not available')
   })
 
   it('monthly: current month outlined, empty months stay empty', () => {
@@ -119,7 +126,8 @@ describe('Air cards', () => {
     stubFetch({
       '/air/delhi/hourly': { ...META, hours: [hour(0, { official_aqi: 250, official_missing: false })] },
       '/air/delhi/daily': { ...META, note: '', days: [
-        { date: '2026-11-23', low: 200, high: 270, is_outlook: false, available: true, label: 'estimated' }] },
+        { date: '2026-11-23', low: 200, high: 270, median: 240, is_outlook: false, available: true,
+          label: 'estimated', method: 'cams_raw', model_version: null }] },
       '/air/delhi/monthly': { ...META, months: [{ month: '2026-11', avg_aqi: 248, days: 23, is_current: true }] },
     }) // prettier-ignore
     withQuery(<AqiChart place="delhi" />)

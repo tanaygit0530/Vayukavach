@@ -182,7 +182,8 @@ class HttpClient:
         self.max_wait = max_wait
         self.rate_limit = rate_limit or RateLimit()
 
-    def get_json(self, url: str, params: dict | None = None):
+    def get_json(self, url: str, params: dict | None = None, headers: dict | None = None):
+        """GET JSON. `headers` apply to this request only (e.g. one provider's API key)."""
         retrying = Retrying(
             stop=stop_after_attempt(self.attempts),
             wait=wait_exponential(multiplier=1, min=1 if self.max_wait else 0, max=self.max_wait),
@@ -192,7 +193,7 @@ class HttpClient:
         for attempt in retrying:
             with attempt:
                 self.rate_limit.acquire()
-                response = self.client.get(url, params=params)
+                response = self.client.get(url, params=params, headers=headers)
                 if response.status_code == 429 or response.status_code >= 500:
                     raise RetryableHTTPError(response)
                 if response.is_error:

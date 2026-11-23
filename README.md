@@ -121,7 +121,7 @@ flowchart LR
 
   subgraph COLLECT["Hourly collectors"]
     MAC["Mac in India · launchd<br/>:05 every hour"]
-    GHA["GitHub Actions<br/>cloud group, hourly"]
+    GHA["GitHub Actions<br/>cloud group hourly<br/>+ nightly forecast"]
   end
 
   DB[("Supabase Postgres<br/>missing hours stored as rows<br/>row level security on")]
@@ -229,6 +229,30 @@ City level, Delhi: **CPCB 249 · our measured AQI 250 · shadow AQI 249.**
 
 ---
 
+## 10-day AQI forecast, tested on a year of history
+
+<img src="docs/screenshots/forecast-10day.jpg" alt="10-day AQI forecast for Delhi: corrected CAMS ranges for days 1-5 and wider outlook ranges for days 6-10" width="100%" />
+
+```mermaid
+flowchart LR
+  H["History<br/>5,597 city-days<br/>Jan 2025 → yesterday"] --> BT["Rolling backtest<br/>48 weekly issues<br/>retrained each week"]
+  BT --> G{"Beats its<br/>baselines?"}
+  G -- yes --> S["Serve: days 1-5 corrected CAMS<br/>days 6-10 outlook (median + range)"]
+  G -- no --> F["Fall back: raw CAMS,<br/>hide days 6-10"]
+```
+
+| Mean error (AQI points) | **Ours** | Raw CAMS | Tomorrow = today | Month average |
+|---|:-:|:-:|:-:|:-:|
+| Days 1–5 (CAMS corrected with yesterday's station data) | **19.3** | 53.1 | 24.7 | – |
+| Days 6–10 (quantile outlook) | **21.1** | – | 27.9 | 24.6 |
+
+The correction cuts raw CAMS's error by 64% and gets the CPCB category right 70–74% of the time
+(raw CAMS: 40–47%). Retrained nightly; a model is only served if it beats its baselines.
+Details, limits and the per-day table: [model card](docs/models/model-card.md) ·
+[backtest](docs/models/backtest.md).
+
+---
+
 ## Honesty rules, built in
 
 ```mermaid
@@ -257,10 +281,10 @@ flowchart LR
 |---|---|
 | Data collection | Python 3.11, httpx + tenacity (retries, backoff, rate limits), GitHub Actions cron, macOS launchd |
 | Database | PostgreSQL on Supabase (free tier), SQLAlchemy 2 + Alembic, row level security |
-| Analysis | pandas, NumPy: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
+| Analysis & ML | pandas, NumPy, LightGBM (quantile + bias-correction models), scikit-learn: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
 | API | FastAPI, Pydantic models, TTL cache, per-IP rate limit, OpenAPI docs |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
-| Quality | pytest (201 tests), Vitest (32) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
+| Quality | pytest (213 tests), Vitest (32) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
 
 ---
 
@@ -313,8 +337,8 @@ gantt
   6 Temperature tab              :done, 2026-11-23, 1d
   7 Heat tab                     :done, 2026-11-23, 1d
   section Features
-  8 AQI forecasts days 6-10      :active, 2026-11-24, 2d
-  9 Pollution sources            :2026-11-27, 1d
+  8 AQI forecasts days 1-10      :done, 2026-11-23, 1d
+  9 Pollution sources            :active, 2026-11-24, 1d
   10 Clean air and cool finder   :2026-11-28, 2d
   11 Ask VayuKavach chatbot      :2026-11-30, 2d
   12 Alerts, tests, deploy       :2026-12-02, 2d

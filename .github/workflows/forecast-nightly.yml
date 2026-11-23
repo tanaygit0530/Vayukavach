@@ -1,0 +1,41 @@
+name: Forecast nightly
+
+on:
+  schedule:
+    - cron: "37 21 * * *" # 21:37 UTC = 03:07 IST, off the busy top of the hour
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-nightly
+  cancel-in-progress: false
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::notice::DATABASE_URL secret not set; skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ready == 'true'
+      - uses: astral-sh/setup-uv@v6
+        if: steps.config.outputs.ready == 'true'
+        with:
+          python-version: "3.11"
+      - name: Apply migrations
+        if: steps.config.outputs.ready == 'true'
+        working-directory: backend
+        run: uv sync --locked && uv run alembic upgrade head
+      - name: Backtest gate, retrain, write 10-day forecasts
+        if: steps.config.outputs.ready == 'true'
+        working-directory: jobs
+        run: uv sync --locked && uv run python run.py forecast

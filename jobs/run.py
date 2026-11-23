@@ -7,6 +7,9 @@ Jobs:
   weather        Open-Meteo weather, hourly + daily, 16-day forecast
   summarize      completeness, gap flags, measured/shadow/official AQI for the last
                  SUMMARY_DAYS IST days (default 2) -> daily_city_summary
+  history        one-off: ~2 years of daily AQI (OpenAQ daily means) + CAMS/weather features
+  forecast       nightly: recent daily AQI + features, backtest gate, retrain, 10-day forecast
+  backtest       full 12-month backtest -> docs/models/backtest.md
   hourly         all of the above, each logged separately in fetch_log
   cloud          all except cpcb (for GitHub-hosted runners)
 
@@ -19,10 +22,11 @@ import logging
 import os
 import sys
 from collections.abc import Callable
+from datetime import timedelta
 
 from sqlalchemy.orm import Session
 
-from collectors import cpcb, openaq, openmeteo
+from collectors import cpcb, history, openaq, openmeteo
 from collectors.common import HttpClient, RateLimit, fetch_run
 from collectors.districts import sync_districts
 
@@ -32,7 +36,7 @@ Collector = Callable[..., None]
 
 
 def _http_for(name: str) -> HttpClient:
-    if name == "openaq":
+    if name in {"openaq", "history", "forecast"}:
         return HttpClient(
             rate_limit=RateLimit(per_minute=openaq.REQUESTS_PER_MINUTE, budget=openaq.RUN_BUDGET)
         )
@@ -49,12 +53,50 @@ def summarize(session: Session, http: HttpClient, districts, stats) -> None:
         stats.notes.append(f"gap-bias flags: {', '.join(flagged)}")
 
 
+def forecast(session: Session, http: HttpClient, districts, stats) -> None:
+    """Nightly: recent daily AQI + features, backtest gate, retrain, write 10-day forecasts."""
+    from app.forecast.serve import run_nightly
+
+    history.daily_aqi_from_readings(session, districts, stats)
+    history.refresh_features(session, http, districts, stats)
+    result = run_nightly(session, weeks=int(os.environ.get("BACKTEST_WEEKS", "52")))
+    s = result.summary
+    stats.rows += result.rows_written
+    stats.notes.append(
+        f"{result.version}: days1-5 MAE {s['days_1_5']['cams_corrected']:.1f} "
+        f"(raw {s['days_1_5']['cams_raw']:.1f}, persistence {s['days_1_5']['persistence']:.1f}); "
+        f"days6-10 MAE {s['days_6_10']['outlook']:.1f} "
+        f"(persistence {s['days_6_10']['persistence']:.1f}); "
+        f"bias ok={s['bias_beats_baseline']} outlook ok={s['outlook_beats_baseline']}"
+    )
+
+
+def backtest_report(session: Session, http: HttpClient, districts, stats) -> None:
+    """Full 12-month backtest -> docs/models/backtest.md (run locally, then commit)."""
+    from pathlib import Path
+
+    from app.forecast.model import backtest, report_markdown, summary
+    from app.forecast.serve import load_frame, today_ist
+    from collectors.common import utc_now
+
+    today = today_ist(utc_now())
+    df = load_frame(session)
+    bt = backtest(df[df["date"] < today], end=today - timedelta(days=1), weeks=52)
+    out = Path(__file__).resolve().parents[1] / "docs" / "models" / "backtest.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(report_markdown(bt, summary(bt)), encoding="utf-8")
+    stats.notes.append(f"wrote {out}")
+
+
 COLLECTORS: dict[str, Collector] = {
     "cpcb": cpcb.run,
     "openaq": openaq.run,
     "openmeteo-air": openmeteo.run_air,
     "weather": openmeteo.run_weather,
     "summarize": summarize,
+    "history": history.run_backfill,
+    "forecast": forecast,
+    "backtest": backtest_report,
 }
 GROUPS = {
     "hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize"],

@@ -7,6 +7,7 @@ never skipped, so completeness and gap analysis can work on it later.
 from datetime import date, datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -313,3 +314,88 @@ class CityHourAqi(Base):
     cams_main_pollutant: Mapped[str | None] = mapped_column(String(8))
     is_forecast: Mapped[bool] = mapped_column(Boolean, default=False)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CityDailyAqi(Base):
+    """Daily city AQI used to train and score forecasts.
+
+    Station AQI = highest sub-index of that day's mean concentrations (a pollutant needs
+    >= 16 observed hours; >= 3 pollutants incl. PM); city AQI = mean of valid station AQIs.
+    Backfilled from OpenAQ daily aggregates, then derived nightly from stored hourly readings.
+    """
+
+    __tablename__ = "city_daily_aqi"
+    __table_args__ = (UniqueConstraint("district_id", "date", name="uq_city_daily_aqi"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    date: Mapped[date] = mapped_column(Date, index=True)
+    aqi: Mapped[int | None] = mapped_column(Integer)
+    stations: Mapped[int] = mapped_column(Integer, default=0)
+    pm25: Mapped[float | None] = mapped_column(Float)  # city mean of station daily means
+    pm10: Mapped[float | None] = mapped_column(Float)
+    no2: Mapped[float | None] = mapped_column(Float)
+    so2: Mapped[float | None] = mapped_column(Float)
+    co: Mapped[float | None] = mapped_column(Float)  # mg/m3
+    o3: Mapped[float | None] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(32))
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class DistrictDailyFeatures(Base):
+    """Daily CAMS and weather per district: history (reanalysis) and forecast days."""
+
+    __tablename__ = "district_daily_features"
+    __table_args__ = (UniqueConstraint("district_id", "date", name="uq_district_daily_features"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    date: Mapped[date] = mapped_column(Date, index=True)
+    cams_pm25: Mapped[float | None] = mapped_column(Float)
+    cams_pm10: Mapped[float | None] = mapped_column(Float)
+    cams_no2: Mapped[float | None] = mapped_column(Float)
+    cams_so2: Mapped[float | None] = mapped_column(Float)
+    cams_co: Mapped[float | None] = mapped_column(Float)  # mg/m3
+    cams_o3: Mapped[float | None] = mapped_column(Float)
+    temperature_mean: Mapped[float | None] = mapped_column(Float)
+    humidity_mean: Mapped[float | None] = mapped_column(Float)
+    wind_mean: Mapped[float | None] = mapped_column(Float)
+    precipitation_sum: Mapped[float | None] = mapped_column(Float)
+    blh_mean: Mapped[float | None] = mapped_column(Float)
+    is_forecast: Mapped[bool] = mapped_column(Boolean, default=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AqiForecastDaily(Base):
+    """Served daily AQI forecasts (latest issue wins in the API)."""
+
+    __tablename__ = "aqi_forecast_daily"
+    __table_args__ = (
+        UniqueConstraint("district_id", "issue_date", "target_date", name="uq_aqi_forecast_daily"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    issue_date: Mapped[date] = mapped_column(Date)
+    target_date: Mapped[date] = mapped_column(Date, index=True)
+    lead_days: Mapped[int] = mapped_column(Integer)
+    low: Mapped[int | None] = mapped_column(Integer)
+    median: Mapped[int | None] = mapped_column(Integer)
+    high: Mapped[int | None] = mapped_column(Integer)
+    # cams_corrected (days 1-5) | cams_raw (fallback) | outlook (days 6-10)
+    method: Mapped[str] = mapped_column(String(24))
+    model_version: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ForecastModel(Base):
+    __tablename__ = "forecast_model"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16))  # bias | outlook
+    version: Mapped[str] = mapped_column(String(64), unique=True)
+    trained_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    train_rows: Mapped[int] = mapped_column(Integer)
+    metrics: Mapped[dict] = mapped_column(JSON)
+    beats_baseline: Mapped[bool] = mapped_column(Boolean)
+    notes: Mapped[str | None] = mapped_column(Text)

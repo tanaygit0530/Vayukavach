@@ -341,4 +341,47 @@ Tests: frontend 32, backend 142, jobs 59. All 10 cities load with no console err
 - Level thresholds are a draft pending the district heat action plans.
 - "Send alert to my team" waits for the Telegram bot (Phase 12).
 
-**Next:** Phase 8, AQI forecasts (bias correction and 10-day outlook).
+
+## Phase 8: AQI forecasts — complete (2026-11-23)
+
+**Built**
+- History (`jobs/collectors/history.py`, `run.py history`): daily city AQI from OpenAQ
+  daily means (one request per live sensor; 5,597 city-days, 9 cities, Jan 2025 → yesterday;
+  Shimla has no station) and daily CAMS + weather features from Open-Meteo history, archive and
+  forecast (7,070 district-days incl. 15 days ahead). Recent days are derived nightly from
+  stored hourly readings with the same definition (`app/forecast/daily_aqi.py`).
+- Tables (migration 0007, RLS): `city_daily_aqi`, `district_daily_features`,
+  `aqi_forecast_daily`, `forecast_model`.
+- Models (`app/forecast/model.py`):
+  - Days 1–5: LightGBM correction of **all six** CAMS pollutants with the station value observed
+    the day before the issue (and its 3-day mean), day ahead, calendar, Diwali / stubble flags
+    and weather → India AQI. The day's range is the hourly CAMS shape centred on that value.
+  - Days 6–10: LightGBM quantile regression (5 / 50 / 95%) on 7 days of lagged AQI, calendar,
+    flags and target-day weather.
+- Backtest: rolling weekly issues over 12 months, retrained before every issue on past data
+  only; MAE and category hit rate per day; baselines raw CAMS, tomorrow = today, month
+  average. Report `docs/models/backtest.md`, model card, notebook `docs/models/aqi_forecast.ipynb`.
+- Serving (`app/forecast/serve.py`, `run.py forecast`, `.github/workflows/forecast-nightly.yml`
+  at 03:07 IST): backtest gate → registry row with metrics → retrain → `aqi_forecast_daily`.
+  Fallbacks: no gain → raw CAMS for days 1–5 / days 6–10 hidden; districts without station
+  history stay on raw CAMS.
+- API `/air/{d}/daily` serves the latest issue (median, low, high, method, model version);
+  the 10-day chart shows ranges, a "most likely" tick and the method in the tooltip.
+- Security: per-request headers, so the OpenAQ key is never sent to Open-Meteo (tested).
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| The backtest table exists | Pass: `docs/models/backtest.md` (48 weekly issues, 2025-11-20 → 2026-11-12) |
+| Both models beat their baselines | Pass: days 1–5 MAE **19.3** vs raw CAMS 53.1 and tomorrow = today 24.7; days 6–10 MAE **21.1** vs tomorrow = today 27.9 and month average 24.6 |
+| The 10-day chart uses the served forecasts | Pass: Air tab (Chromium) shows the served ranges, medians and methods; Shimla shows raw CAMS and no outlook |
+
+Tests: backend 153, jobs 60, frontend 32.
+
+**Known issues**
+- The days 1–5 backtest uses CAMS analyses (no free archive of past forecasts): an upper bound.
+- The outlook backtest uses observed weather; live serving uses the weather forecast.
+- Outlook range coverage is 75% (target 80%); calibration is future work.
+- The full nightly job takes about 7 minutes (52 weekly retrains).
+
+**Next:** Phase 9, Pollution sources.

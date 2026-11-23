@@ -9,6 +9,7 @@ export interface Column {
   showLabel: boolean
   low: number | null // floating bars (10 days); null = from zero
   value: number | null // bar top
+  mid?: number | null // median tick (10 days)
   kind: 'measured' | 'shadow' | 'estimated' | 'forecast' | 'outlook' | 'none'
   outlined?: boolean // current month
   isNow?: boolean
@@ -79,6 +80,12 @@ export function hourlyColumns(hours: AirHour[], now: Date): Column[] {
   })
 }
 
+const METHOD_TEXT: Record<string, string> = {
+  cams_corrected: 'CAMS forecast corrected with station data',
+  cams_raw: 'raw CAMS forecast',
+  outlook: 'outlook model, lower confidence',
+}
+
 export function dailyColumns(days: AirDay[]): Column[] {
   return days.map((d) => ({
     key: d.date,
@@ -86,14 +93,16 @@ export function dailyColumns(days: AirDay[]): Column[] {
     showLabel: true,
     low: d.low,
     value: d.high,
+    mid: d.median,
     kind: d.is_outlook ? 'outlook' : d.available ? 'forecast' : 'none',
     tooltip: [
       fmtDay(d.date),
       d.available && d.low !== null
-        ? `AQI ${d.low}–${d.high}${cat(d.high)} · CAMS forecast, Estimated`
+        ? `AQI ${d.low}–${d.high}${d.median !== null ? `, most likely ${d.median}${cat(d.median)}` : cat(d.high)}`
         : d.is_outlook
-          ? 'Outlook not available yet'
+          ? 'Outlook not available'
           : 'No forecast',
+      ...(d.available && d.method ? [`${METHOD_TEXT[d.method] ?? d.method} · Estimated`] : []),
     ],
   }))
 }

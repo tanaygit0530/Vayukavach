@@ -113,9 +113,12 @@ export interface AirDay {
   date: string
   low: number | null
   high: number | null
+  median: number | null
   is_outlook: boolean
   available: boolean
   label: string
+  method: 'cams_corrected' | 'cams_raw' | 'outlook' | null
+  model_version: string | null
 }
 
 export interface AirMonth {

@@ -12,7 +12,7 @@ from app.analysis.aqi import category, sub_index, window_average, window_sub_ind
 from app.analysis.shadow import Neighbour, haversine_km, idw_estimate
 from app.analysis.summary import AQI_POLLUTANTS, SETTLE_HOURS, floor_ist_hour
 from app.analysis.time import IST, day_bounds, ist_date
-from app.models import CityHourAqi, DailyCitySummary, District
+from app.models import AqiForecastDaily, CityHourAqi, DailyCitySummary, District
 
 LOOKBACK_FOR_NOW = timedelta(hours=6)
 
@@ -117,8 +117,51 @@ def air_hourly(session: Session, district: District, now: datetime) -> list[dict
 OUTLOOK_DAYS = 5  # days 6-10 need the Phase 8 outlook model
 
 
+def served_forecast(session: Session, district: District, today) -> dict:
+    """Latest issued forecast (today's, else yesterday's) keyed by target date."""
+    issue = session.execute(
+        select(AqiForecastDaily.issue_date)
+        .where(
+            AqiForecastDaily.district_id == district.id,
+            AqiForecastDaily.issue_date <= today,
+            AqiForecastDaily.issue_date >= today - timedelta(days=1),
+        )
+        .order_by(AqiForecastDaily.issue_date.desc())
+        .limit(1)
+    ).scalar()
+    if issue is None:
+        return {}
+    rows = session.execute(
+        select(AqiForecastDaily).where(
+            AqiForecastDaily.district_id == district.id, AqiForecastDaily.issue_date == issue
+        )
+    ).scalars()
+    return {r.target_date: r for r in rows}
+
+
 def air_daily(session: Session, district: District, now: datetime) -> list[dict]:
     today = ist_date(now)
+    served = served_forecast(session, district, today)
+    if served:
+        out = []
+        for i in range(10):
+            day = today + timedelta(days=i)
+            r = served.get(day)
+            ok = r is not None and r.low is not None
+            out.append(
+                {
+                    "date": day,
+                    "low": r.low if ok else None,
+                    "high": r.high if ok else None,
+                    "median": r.median if r else None,
+                    "is_outlook": i >= OUTLOOK_DAYS,
+                    "available": ok,
+                    "label": "estimated",
+                    "method": r.method if r else None,
+                    "model_version": r.model_version if r else None,
+                }
+            )
+        return out
     start = day_bounds(today)[0]
     rows = hour_rows(session, district.id, start, start + timedelta(days=10))
     df = pd.DataFrame(
@@ -129,8 +172,9 @@ def air_daily(session: Session, district: District, now: datetime) -> list[dict]
     for i in range(10):
         day = today + timedelta(days=i)
         if i >= OUTLOOK_DAYS:
-            out.append({"date": day, "low": None, "high": None, "is_outlook": True,
-                        "available": False, "label": "estimated"})  # fmt: skip
+            out.append({"date": day, "low": None, "high": None, "median": None, "is_outlook": True,
+                        "available": False, "label": "estimated", "method": None,
+                        "model_version": None})  # fmt: skip
             continue
         values = df[df["day"] == day]["cams"].dropna() if not df.empty else pd.Series()
         enough = len(values) >= 12
@@ -139,9 +183,12 @@ def air_daily(session: Session, district: District, now: datetime) -> list[dict]
                 "date": day,
                 "low": int(values.min()) if enough else None,
                 "high": int(values.max()) if enough else None,
+                "median": None,
                 "is_outlook": False,
                 "available": enough,
                 "label": "estimated",
+                "method": "cams_raw" if enough else None,
+                "model_version": None,
             }
         )
     return out

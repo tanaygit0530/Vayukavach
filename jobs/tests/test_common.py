@@ -174,3 +174,16 @@ def test_upsert_counts_rows_written(session, districts):
     assert upsert(session, District.__table__, rows, ["slug"]) == 1
     assert upsert(session, District.__table__, rows, ["slug"], do_nothing=True) == 0
     assert upsert(session, District.__table__, rows, ["slug"]) == 1  # update counts
+
+
+def test_per_request_headers_do_not_stick_to_the_client():
+    seen = []
+
+    def handler(request):
+        seen.append(request.headers.get("X-API-Key"))
+        return httpx.Response(200, json={})
+
+    http = mock_http(handler)
+    http.get_json("https://api.openaq.org/x", headers={"X-API-Key": "SECRET"})
+    http.get_json("https://api.open-meteo.com/y")
+    assert seen == ["SECRET", None]

@@ -89,3 +89,33 @@ def test_air_map_grid_and_validation(client):
     assert len(body["cells"]) == 25 and body["cells"][0]["pm25_sub_index"] is not None
     assert client.get("/api/v1/air/map", params={"bbox": "1,2,3"}).status_code == 422
     assert client.get("/api/v1/air/map", params={"bbox": "60,5,90,35"}).status_code == 422
+
+
+def test_air_daily_serves_stored_forecasts(client, db_engine):
+    from datetime import timedelta
+
+    from sqlalchemy import text
+
+    from app.analysis.time import ist_date
+    from tests.api.conftest import NOW
+
+    today = ist_date(NOW)
+    with db_engine.begin() as conn:
+        did = conn.execute(text("SELECT id FROM districts WHERE slug = 'delhi'")).scalar_one()
+        for i in range(10):
+            method = "cams_corrected" if i < 5 else "outlook"
+            conn.execute(
+                text(
+                    "INSERT INTO aqi_forecast_daily (district_id, issue_date, target_date,"
+                    " lead_days, low, median, high, method, model_version, created_at) VALUES"
+                    " (:d, :issue, :t, :lead, :lo, :mid, :hi, :m, 'v-test', now())"
+                ),
+                {"d": did, "issue": today, "t": today + timedelta(days=i), "lead": i + 1,
+                 "lo": 200 + i, "mid": 240 + i, "hi": 280 + i, "m": method},
+            )  # fmt: skip
+    body = client.get("/api/v1/air/delhi/daily").json()
+    days = body["days"]
+    assert len(days) == 10 and all(d["available"] for d in days)
+    assert days[0]["method"] == "cams_corrected" and days[0]["median"] == 240
+    assert days[7]["is_outlook"] and days[7]["method"] == "outlook" and days[7]["low"] == 207
+    assert "bias-corrected" in body["note"] and "outlook model" in body["note"]

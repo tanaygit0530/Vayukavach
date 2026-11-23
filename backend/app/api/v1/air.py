@@ -122,9 +122,12 @@ class DayRange(BaseModel):
     date: date
     low: int | None
     high: int | None
+    median: int | None
     is_outlook: bool
     available: bool
     label: str
+    method: str | None  # cams_corrected | cams_raw | outlook
+    model_version: str | None
 
 
 class AirDaily(Meta):
@@ -141,12 +144,23 @@ def daily(
 ):
     """10 days of AQI low-high. Days 1-5: CAMS forecast. Days 6-10: outlook (Phase 8)."""
     days = _cached("air_daily", district, now, lambda: air.air_daily(session, district, now))
+    methods = {d["method"] for d in days if d["method"]}
+    early = (
+        "Days 1-5: CAMS forecast bias-corrected against stored station data"
+        if "cams_corrected" in methods
+        else "Days 1-5: raw CAMS forecast"
+    )
+    late = (
+        "days 6-10: outlook model (median and 5-95% quantile range, lower confidence)"
+        if "outlook" in methods
+        else "days 6-10: not available (the outlook model is missing or not better than "
+        "simple baselines)"
+    )
     return {
         "district": district.slug,
         "days": days,
-        "note": "Days 1-5 from the CAMS forecast (Estimated). Days 6-10 need the outlook model "
-        "and are not available yet.",
-        **meta(SRC_CAMS, now, "estimated", now),
+        "note": f"{early}; {late}. All Estimated.",
+        **meta(f"{SRC_CAMS}; VayuKavach forecast models", now, "estimated", now),
     }
 
 
