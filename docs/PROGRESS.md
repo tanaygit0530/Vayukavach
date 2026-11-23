@@ -151,7 +151,6 @@ Tests: backend 86 passed, jobs 57 passed; ruff and ESLint clean.
   share the OpenAQ rate limit.
 - Free tier is 500 MB: production backfills **30 days** of **reference monitors only**
   (`OPENAQ_BACKFILL_DAYS`, `OPENAQ_REFERENCE_ONLY` repository variables).
-- To do: reset the database password (it was shared in chat) and update `.env` and the secret.
 
 ## Phase 3: Backend API — complete (2026-11-23)
 
