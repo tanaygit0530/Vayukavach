@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text: #17212b;
+  --text-muted: #5e6b77;
+  --page-bg: #e9eef2;
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--page-bg);
+}
