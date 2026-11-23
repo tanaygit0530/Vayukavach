@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -115,14 +115,15 @@ class WeatherDaily(Meta):
 @router.get("/{district}/daily", response_model=WeatherDaily)
 def daily(
     district: District = Depends(get_district),
+    days: int = Query(default=10, ge=1, le=16, description="Days from today (max 16)"),
     session: Session = Depends(get_session),
     now: datetime = Depends(get_now),
 ):
-    """10-day forecast: low, high, sky condition, rain, UV."""
+    """Daily forecast from today: low, high, sky condition, rain, UV (default 10 days)."""
     current = wx.current_row(session, district, now)
     return {
         "district": district.slug,
-        "days": wx.weather_daily(session, district, now),
+        "days": wx.weather_daily(session, district, now, days),
         **meta(SRC_WEATHER, current.fetched_at if current else None, "estimated", now),
     }
 

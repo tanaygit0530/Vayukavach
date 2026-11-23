@@ -72,12 +72,14 @@ def weather_now(session: Session, district: District, now: datetime) -> dict:
             base["apparent_temperature"],
             base["humidity"],
             base["wind_speed"],
+            base["uv_index"],
         ),  # fmt: skip
     }
 
 
-def feels_like_reason(temp, apparent, humidity, wind) -> str | None:
-    """One-line reason why it feels warmer or cooler than the thermometer reading."""
+def feels_like_reason(temp, apparent, humidity, wind, uv=None) -> str | None:
+    """One-line reason why it feels warmer or cooler than the thermometer reading.
+    Sun is only mentioned when the UV index shows it is up (never at night)."""
     if temp is None or apparent is None:
         return None
     diff = apparent - temp
@@ -86,7 +88,9 @@ def feels_like_reason(temp, apparent, humidity, wind) -> str | None:
     if diff > 0:
         if humidity is not None and humidity >= 60:
             return "Humid air makes it feel warmer: sweat evaporates slowly."
-        return "Strong sun and little wind make it feel warmer."
+        if uv is not None and uv >= 3:
+            return "Strong sun and little wind make it feel warmer."
+        return "Still, warm air makes it feel warmer than the thermometer reading."
     if wind is not None and wind >= 10:
         return "Wind makes it feel cooler than the air temperature."
     return "Dry air makes it feel cooler than the air temperature."
@@ -107,7 +111,9 @@ def weather_hourly(session: Session, district: District, now: datetime) -> list[
     ]
 
 
-def weather_daily(session: Session, district: District, now: datetime) -> list[dict]:
+def weather_daily(
+    session: Session, district: District, now: datetime, days: int = 10
+) -> list[dict]:
     return [
         {
             "date": d.date,
@@ -121,7 +127,7 @@ def weather_daily(session: Session, district: District, now: datetime) -> list[d
             "uv_index_max": d.uv_index_max,
             "is_forecast": d.is_forecast,
         }
-        for d in _daily(session, district.id, ist_date(now), 10)
+        for d in _daily(session, district.id, ist_date(now), days)
     ]
 
 

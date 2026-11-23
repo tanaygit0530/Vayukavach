@@ -8,6 +8,12 @@ import {
   type AirMonth,
   type AirNow,
   type Co2,
+  type HeatSummary,
+  type SunDay,
+  type Uv,
+  type WeatherDay,
+  type WeatherHour,
+  type WeatherNowFull,
   type MapCell,
   type PollutantValue,
   type StationPin,
@@ -125,5 +131,44 @@ export function useAirMap(bbox: string | null) {
     queryFn: () => apiGet<Meta & { cells: MapCell[]; grid: number }>('/air/map', { bbox: bbox! }),
     enabled: !!bbox,
     staleTime: 30 * MINUTE,
+  })
+}
+
+const wx = <T,>(place: string, part: string, params?: Record<string, string>) => () =>
+  apiGet<T>(`/weather/${place}/${part}`, params)
+
+export function useWeatherFull(place: string) {
+  return useQuery({ queryKey: ['weather-now', place], queryFn: wx<WeatherNowFull>(place, 'now'), staleTime: 5 * MINUTE })
+}
+
+export function useWeatherHourly(place: string) {
+  return useQuery({
+    queryKey: ['weather-hourly', place],
+    queryFn: wx<Meta & { hours: WeatherHour[]; note: string }>(place, 'hourly'),
+    staleTime: 10 * MINUTE,
+  })
+}
+
+export function useWeatherDaily(place: string, days = 11) {
+  return useQuery({
+    queryKey: ['weather-daily', place, days],
+    queryFn: wx<Meta & { days: WeatherDay[] }>(place, 'daily', { days: String(days) }),
+    staleTime: 30 * MINUTE,
+  })
+}
+
+export function useSun(place: string) {
+  return useQuery({ queryKey: ['sun', place], queryFn: wx<Meta & { days: SunDay[] }>(place, 'sun'), staleTime: 60 * MINUTE })
+}
+
+export function useUv(place: string) {
+  return useQuery({ queryKey: ['uv', place], queryFn: wx<Uv>(place, 'uv'), staleTime: 10 * MINUTE })
+}
+
+export function useHeatSummary(place: string) {
+  return useQuery({
+    queryKey: ['heat', place],
+    queryFn: () => apiGet<HeatSummary>(`/heat/${place}`),
+    staleTime: 10 * MINUTE,
   })
 }

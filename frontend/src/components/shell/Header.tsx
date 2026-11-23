@@ -1,5 +1,6 @@
 import { Cloud, CloudRain, CloudSun, Sun } from 'lucide-react'
 import { forwardRef, useEffect, useState } from 'react'
+import { useLocation } from 'react-router'
 
 import { formatIstTime } from '../../lib/format'
 import { useWeatherNow } from '../../lib/queries'
@@ -37,7 +38,9 @@ export const Header = forwardRef<HTMLButtonElement, HeaderProps>(function Header
 ) {
   const now = useClock()
   const weather = useWeatherNow(place)
-  const temp = weather.data?.temperature
+  // The Temperature tab shows the temperature in its own card: each number once per screen.
+  const { pathname } = useLocation()
+  const temp = pathname === '/temperature' ? null : weather.data?.temperature
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <LocationButton ref={ref} place={place} open={drawerOpen} onClick={onOpenPlaces} />

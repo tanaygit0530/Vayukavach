@@ -275,4 +275,37 @@ Tests: frontend 16, backend 138, jobs 59.
 - The OpenAQ hourly run makes about one request per live sensor (~770, ~14 min). A
   `/locations/{id}/latest` approach would cut that sharply (optimisation for later).
 
-**Next:** Phase 6, Temperature tab.
+
+## Phase 6: Temperature tab — complete (2026-11-23)
+
+**Built** (`frontend/src/components/temperature`, `pages/TemperaturePage.tsx`)
+- Header row: "Temperature" pill, "Export CSV" (dark button). The global location button stays.
+- `MyLocationCard`: condition with sky icon (moon after sunset), current temperature, today's
+  high and low, original light-grey skyline drawing.
+- `FeelsLikeCard`: apparent temperature + rule-based reason, link "Heat risk: <level> → Heat alerts".
+- `TempTrend`: 13 bubbles 7 AM–7 PM positioned by value; the current hour is a green "Now"
+  bubble with a soft stem (the number is already on the location card); forecast hours dashed.
+- `ForecastList`: 10 days from **tomorrow** (today's high/low are on the location card),
+  low–high gradient bars on one shared scale.
+- `SunArc`, `UvGauge` (WHO bands, pointer, peak, cover-up hours), `ConditionGrid` (rainfall,
+  humidity, dew point, pressure; segmented rows for cloud cover, rain chance and day–night swing
+  with one-line notes).
+- Each number appears once per screen; the header hides its temperature on this tab.
+- CSV: one table (`kind` = hourly | daily), 18 columns, IST times, missing values left empty.
+- Backend: `/weather/{d}/daily?days=` (1–16); feels-like reason only mentions sun when UV ≥ 3.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| Every card shows real stored forecast data | Pass: Chromium, all 10 cities (location, 13 trend points, 10 forecast days) |
+| Export CSV downloads a valid file | Pass: 48 hourly + 11 daily rows, 18 columns; unit-tested escaping and empty missing values |
+| Switching places updates everything | Pass: Delhi → Shimla in Chromium |
+
+Tests: frontend 22, backend 140, jobs 59.
+
+**Known issues**
+- Weather values are model values; the tab says so once at the top (and per card when stale)
+  rather than putting dashed borders on every card.
+- "Feels like" can equal the air temperature (different measures, so both are shown).
+
+**Next:** Phase 7, Heat tab.

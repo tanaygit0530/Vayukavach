@@ -39,6 +39,8 @@ def test_weather_now_and_hourly(client):
 def test_weather_daily_sun_uv(client):
     daily = client.get("/api/v1/weather/delhi/daily").json()
     assert len(daily["days"]) == 10 and daily["days"][0]["is_forecast"] is False
+    assert len(client.get("/api/v1/weather/delhi/daily?days=3").json()["days"]) == 3
+    assert client.get("/api/v1/weather/delhi/daily?days=40").status_code == 422
     sun = client.get("/api/v1/weather/delhi/sun").json()
     assert sun["days"][0]["sunrise"].startswith(f"{NOW.date()}T06:40") or sun["days"][0][
         "sunrise"

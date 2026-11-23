@@ -179,3 +179,71 @@ export interface MapCell {
   pm25_sub_index: number | null
   category_key: string | null
 }
+
+export interface WeatherFields {
+  temperature: number | null
+  apparent_temperature: number | null
+  humidity: number | null
+  dew_point: number | null
+  wind_speed: number | null
+  wind_gusts: number | null
+  wind_direction: number | null
+  pressure: number | null
+  cloud_cover: number | null
+  precipitation: number | null
+  precipitation_probability: number | null
+  visibility: number | null
+  uv_index: number | null
+  weather_code: number | null
+  boundary_layer_height: number | null
+  condition: string | null
+}
+
+export interface WeatherNowFull extends Meta, WeatherFields {
+  district: string
+  hour: string | null
+  today_high: number | null
+  today_low: number | null
+  wind_direction_compass: string | null
+  feels_like_reason: string | null
+  note: string
+}
+
+export interface WeatherHour extends WeatherFields {
+  hour: string
+  is_forecast: boolean
+}
+
+export interface WeatherDay {
+  date: string
+  temperature_min: number | null
+  temperature_max: number | null
+  apparent_temperature_max: number | null
+  weather_code: number | null
+  condition: string | null
+  precipitation_sum: number | null
+  precipitation_probability_max: number | null
+  uv_index_max: number | null
+  is_forecast: boolean
+}
+
+export interface SunDay {
+  date: string
+  sunrise: string | null
+  sunset: string | null
+  daylight_seconds: number | null
+}
+
+export interface Uv extends Meta {
+  uv_index: number | null
+  category: string | null
+  uv_index_max: number | null
+  max_category: string | null
+  cover_up_from: string | null
+  cover_up_until: string | null
+}
+
+export interface HeatSummary extends Meta {
+  level: string | null
+  level_name: string | null
+}

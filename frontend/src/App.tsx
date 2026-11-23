@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppShell } from './components/shell/AppShell'
 import { AirPage } from './pages/AirPage'
 import { Placeholder } from './pages/Placeholder'
+import { TemperaturePage } from './pages/TemperaturePage'
 
 function RedirectKeepingQuery({ to }: { to: string }) {
   const { search } = useLocation()
@@ -15,10 +16,7 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route index element={<RedirectKeepingQuery to="/air" />} />
         <Route path="air" element={<AirPage />} />
-        <Route
-          path="temperature"
-          element={<Placeholder title="Temperature" phase={6} note="Temperature trend, 10-day forecast, sun and UV cards." />}
-        />
+        <Route path="temperature" element={<TemperaturePage />} />
         <Route
           path="heat"
           element={<Placeholder title="Heat" phase={7} note="Humid-heat level, safe work hours and tips." />}
