@@ -208,3 +208,79 @@ class FetchLog(Base):
     # running | ok | failed | skipped
     status: Mapped[str] = mapped_column(String(16), default="running", server_default="running")
     detail: Mapped[str | None] = mapped_column(Text)
+
+
+class StationDayCompleteness(Base):
+    """Share of expected hourly readings that arrived, per station, pollutant and IST day."""
+
+    __tablename__ = "station_day_completeness"
+    __table_args__ = (
+        UniqueConstraint("station_id", "date", "pollutant", name="uq_station_day_pollutant"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    station_id: Mapped[int] = mapped_column(ForeignKey("stations.id", ondelete="CASCADE"))
+    date: Mapped[date] = mapped_column(Date, index=True)
+    pollutant: Mapped[str] = mapped_column(String(8))
+    expected: Mapped[int] = mapped_column(Integer)
+    received: Mapped[int] = mapped_column(Integer)
+    excluded: Mapped[int] = mapped_column(Integer)
+    pct: Mapped[float] = mapped_column(Float)
+    longest_gap_hours: Mapped[int] = mapped_column(Integer)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class DailyCitySummary(Base):
+    """Official vs measured vs shadow AQI, completeness and gap flags per district and IST day.
+
+    official_*: from CPCB's published sub-indices (data.gov.in feed).
+    measured_*: our India AQI from reported concentrations only (values >= 999 dropped,
+                as CPCB does).
+    shadow_*:   our India AQI with missing station-hours estimated (Estimated, never official).
+    """
+
+    __tablename__ = "daily_city_summary"
+    __table_args__ = (UniqueConstraint("district_id", "date", name="uq_daily_city_summary"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    date: Mapped[date] = mapped_column(Date, index=True)
+    is_partial_day: Mapped[bool] = mapped_column(Boolean)  # today, still in progress
+    hours_covered: Mapped[int] = mapped_column(Integer)
+
+    official_aqi: Mapped[int | None] = mapped_column(Integer)
+    official_hour: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    official_stations: Mapped[int] = mapped_column(Integer, default=0)
+
+    measured_aqi: Mapped[int | None] = mapped_column(Integer)
+    measured_main_pollutant: Mapped[str | None] = mapped_column(String(8))
+    measured_stations: Mapped[int] = mapped_column(Integer, default=0)
+
+    shadow_aqi: Mapped[int | None] = mapped_column(Integer)
+    shadow_aqi_low: Mapped[int | None] = mapped_column(Integer)
+    shadow_aqi_high: Mapped[int | None] = mapped_column(Integer)
+    shadow_main_pollutant: Mapped[str | None] = mapped_column(String(8))
+    shadow_stations: Mapped[int] = mapped_column(Integer, default=0)
+    filled_hours: Mapped[int] = mapped_column(Integer, default=0)  # station-pollutant-hours
+    unfilled_hours: Mapped[int] = mapped_column(Integer, default=0)
+    shadow_mae_pm25: Mapped[float | None] = mapped_column(Float)  # ug/m3, hold-out validation
+    shadow_validation_n: Mapped[int] = mapped_column(Integer, default=0)
+
+    completeness_pct: Mapped[float | None] = mapped_column(Float)
+    expected_readings: Mapped[int] = mapped_column(Integer, default=0)
+    received_readings: Mapped[int] = mapped_column(Integer, default=0)
+    stations_total: Mapped[int] = mapped_column(Integer, default=0)
+    stations_silent: Mapped[int] = mapped_column(Integer, default=0)  # silent 3+ hours
+    city_silent_hours: Mapped[int] = mapped_column(Integer, default=0)  # >= 25% silent
+    max_share_silent: Mapped[float | None] = mapped_column(Float)
+
+    gap_bias_flag: Mapped[bool | None] = mapped_column(Boolean)
+    gap_bias_diff_pp: Mapped[float | None] = mapped_column(Float)
+    polluted_missing_pct: Mapped[float | None] = mapped_column(Float)
+    clean_missing_pct: Mapped[float | None] = mapped_column(Float)
+    gap_bias_level_source: Mapped[str | None] = mapped_column(String(16))  # cams | stations
+
+    excluded_count: Mapped[int] = mapped_column(Integer, default=0)
+    near_limit_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

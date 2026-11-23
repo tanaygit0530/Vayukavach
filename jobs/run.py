@@ -5,6 +5,8 @@ Jobs:
   openaq         OpenAQ v3 station history (90-day backfill, then incremental)
   openmeteo-air  Open-Meteo CAMS air model, 5-day forecast
   weather        Open-Meteo weather, hourly + daily, 16-day forecast
+  summarize      completeness, gap flags, measured/shadow/official AQI for the last
+                 SUMMARY_DAYS IST days (default 2) -> daily_city_summary
   hourly         all of the above, each logged separately in fetch_log
 
 Exit code is 1 if any collector failed, so GitHub Actions marks the run red.
@@ -13,6 +15,7 @@ Exit code is 1 if any collector failed, so GitHub Actions marks the run red.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from collections.abc import Callable
 
@@ -35,13 +38,24 @@ def _http_for(name: str) -> HttpClient:
     return HttpClient()
 
 
+def summarize(session: Session, http: HttpClient, districts, stats) -> None:
+    from app.analysis.summary import build_recent
+
+    rows = build_recent(session, days=int(os.environ.get("SUMMARY_DAYS", "2")))
+    stats.rows += len(rows)
+    flagged = [f"{r['district_id']}:{r['date']}" for r in rows if r["gap_bias_flag"]]
+    if flagged:
+        stats.notes.append(f"gap-bias flags: {', '.join(flagged)}")
+
+
 COLLECTORS: dict[str, Collector] = {
     "cpcb": cpcb.run,
     "openaq": openaq.run,
     "openmeteo-air": openmeteo.run_air,
     "weather": openmeteo.run_weather,
+    "summarize": summarize,
 }
-GROUPS = {"hourly": ["cpcb", "openmeteo-air", "weather", "openaq"]}
+GROUPS = {"hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize"]}
 JOBS = sorted([*COLLECTORS, *GROUPS])
 
 

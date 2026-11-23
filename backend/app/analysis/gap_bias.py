@@ -57,14 +57,14 @@ def missing_when_it_mattered(
         return None
     ranked = both.sort_values("level", kind="mergesort")
     clean, polluted = ranked.head(n), ranked.tail(n)
-    polluted_pct = 100.0 * polluted["missing"].mean()
-    clean_pct = 100.0 * clean["missing"].mean()
+    polluted_pct = float(100.0 * polluted["missing"].mean())
+    clean_pct = float(100.0 * clean["missing"].mean())
     diff = polluted_pct - clean_pct
     return GapBias(
         polluted_missing_pct=round(polluted_pct, 1),
         clean_missing_pct=round(clean_pct, 1),
         diff_pp=round(diff, 1),
-        flagged=diff >= threshold_pp,
+        flagged=bool(diff >= threshold_pp),
         polluted_hours=sorted(h.to_pydatetime() for h in polluted.index),
         clean_hours=sorted(h.to_pydatetime() for h in clean.index),
     )

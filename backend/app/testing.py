@@ -47,10 +47,9 @@ def downgrade(url: str, revision: str = "base") -> None:
 
 
 def truncate_all(engine: Engine) -> None:
+    from app import models  # noqa: F401  (registers every table)
+    from app.db import Base
+
+    tables = ", ".join(Base.metadata.tables)
     with engine.begin() as conn:
-        conn.execute(
-            text(
-                "TRUNCATE readings, sensors, model_air, weather, weather_daily, stations,"
-                " districts, fetch_log RESTART IDENTITY CASCADE"
-            )
-        )
+        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
