@@ -92,6 +92,13 @@ Production therefore defaults to `OPENAQ_BACKFILL_DAYS=30` and `OPENAQ_REFERENCE
 **Security:** every table has row level security enabled with no policies (migration 0005),
 so Supabase's public REST API cannot read or write them; the backend connects as the owner.
 
+**Where each collector runs:** GitHub Actions runs the `cloud` group (Open-Meteo, OpenAQ,
+summaries) every hour. **CPCB runs on a Mac in India**, because data.gov.in refuses connections
+from GitHub's runners (`Connection refused`, checked twice on 2026-11-23). Install it with
+`./jobs/scripts/install_cpcb_launchd.sh`: a launchd job at :05 every hour, running from a clone
+in `~/.vayukavach` (macOS blocks background jobs from reading `~/Desktop`), log in
+`~/Library/Logs/vayukavach-cpcb.log`. Hours when the Mac is asleep are stored as missing.
+
 **Scheduled runs:** `.github/workflows/collect-hourly.yml` runs at minute 10 of every hour.
 Add the repository secrets `DATABASE_URL` (Supabase), `DATA_GOV_IN_API_KEY` and `OPENAQ_API_KEY`;
 until `DATABASE_URL` is set the workflow skips itself.

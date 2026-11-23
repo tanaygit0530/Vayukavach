@@ -220,4 +220,12 @@ browser console errors. Check it at http://localhost:5180 (API on :8000).
 - Bubbles stack one per row on phones; Phase 5 lays them out over the map.
 - Playwright Chromium is installed for screenshots; end-to-end tests come in Phase 12.
 
+### Collector hosting update (2026-11-23)
+First Supabase run: Open-Meteo, OpenAQ (770 sensors, all 10 cities, 554,400 readings, 30 days),
+and summaries OK; database 116 MB. **CPCB failed from GitHub:** data.gov.in refuses connections
+from GitHub-hosted runners (works from India in about 1 s). Decision: CPCB runs hourly from the
+Mac via launchd (`jobs/scripts/install_cpcb_launchd.sh`); GitHub runs the new `cloud` group.
+Verified: launchd run stored 3,964 CPCB rows in Supabase. Limitation: no CPCB data while the
+Mac sleeps (stored as missing hours).
+
 **Next:** Phase 5, Air tab.
