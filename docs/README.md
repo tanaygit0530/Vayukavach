@@ -96,6 +96,12 @@ so Supabase's public REST API cannot read or write them; the backend connects as
 Add the repository secrets `DATABASE_URL` (Supabase), `DATA_GOV_IN_API_KEY` and `OPENAQ_API_KEY`;
 until `DATABASE_URL` is set the workflow skips itself.
 
+## API (Phase 3)
+
+`cd backend && uv run uvicorn app.main:app --reload`, then open http://localhost:8000/docs.
+Every response includes `source`, `updated_at` (IST), `label` and `stale`. Endpoints read only
+stored data, except place search (Open-Meteo Geocoding) and the map grid (CAMS), which are cached.
+
 ## Checks
 
 ```bash

@@ -139,4 +139,50 @@ Tests: backend 86 passed, jobs 57 passed; ruff and ESLint clean.
   the backfill reaches them (about 2 more hourly runs). Shimla has no station at all.
 - The Severe band's upper concentration limits are provisional (see `aqi_breakpoints.py`).
 
-**Next:** Phase 3, Backend API.
+
+## Supabase (production database) — set up (2026-11-23)
+
+- Project in ap-southeast-1. Apps connect through the **session pooler** (IPv4); the direct
+  `db.<ref>.supabase.co` host is IPv6 only, which GitHub runners cannot reach.
+- Migrations applied; **row level security on every table** (0005, plus each new table), so
+  the public REST API with the publishable key reads nothing. A test enforces RLS on all tables.
+- GitHub secrets `DATABASE_URL`, `DATA_GOV_IN_API_KEY`, `OPENAQ_API_KEY` set; "Collect hourly"
+  now fills Supabase at :10 UTC (:40 IST). Local hourly runs were stopped so the two do not
+  share the OpenAQ rate limit.
+- Free tier is 500 MB: production backfills **30 days** of **reference monitors only**
+  (`OPENAQ_BACKFILL_DAYS`, `OPENAQ_REFERENCE_ONLY` repository variables).
+- To do: reset the database password (it was shared in chat) and update `.env` and the secret.
+
+## Phase 3: Backend API — complete (2026-11-23)
+
+**Built**
+- `GET /api/v1/...`: `places/search`, `places/summary`; `air/{d}/now|hourly|daily|monthly|
+  pollutants|stations|wind|advice`, `air/map?bbox=`; `weather/{d}/now|hourly|daily|sun|uv`;
+  `heat/{d}`; `reports/{d}/gaps?date=&format=csv`. 18 endpoints plus `/health`; OpenAPI at `/docs`.
+- Every response carries `source`, `updated_at` (IST), `label` (measured / estimated / mixed)
+  and `stale` (older than 2 h). Pydantic response models throughout.
+- `city_hour_aqi` table (filled by `summarize`): hour-by-hour CPCB official, our measured,
+  shadow (± band) and CAMS AQI including forecast hours; vectorised running AQI
+  (`analysis/hourly.py`, checked hour by hour against the scalar code).
+- Districts without stations (Shimla) fall back to CAMS AQI, labelled Estimated.
+- `analysis/heat.py`: NWS heat index, Stull wet-bulb (checked against a psychrometric solver),
+  levels (draft thresholds), safe work windows 6 AM–7 PM, NDMA tips.
+- CAMS CO₂ collected (ppm), shown as context only.
+- In-memory TTL cache (5 min for DB, 1 h for the map grid, 24 h for geocoding), per-IP rate
+  limit (120/min, `RATE_LIMIT_PER_MINUTE`), CORS for the frontend origin.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| `/docs` lists all endpoints | Pass: 18 `/api/v1` paths in the OpenAPI schema (tested) |
+| Every endpoint returns real stored data for the 10 cities | Pass: all 18 return 200 for all 10 cities on live data. Gap reports are `null` for the 9 cities whose OpenAQ backfill is still running (data, not an error) |
+| Tests pass | Pass: backend 137 (18 endpoint tests on a seeded DB, external HTTP mocked), jobs 59 |
+
+**Known issues**
+- Air daily: days 6–10 are placeholders (`available: false`) until the Phase 8 outlook model.
+- Air monthly has only 1 month of data so far; it fills as summaries accumulate.
+- The CPCB "health impact" wording is CPCB's NAQI text as best known; confirm against the
+  current CPCB bulletin before launch.
+- The cache and rate limit are per process; use Redis if the API runs on several instances.
+
+**Next:** Phase 4, Frontend shell and design system.
