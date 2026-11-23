@@ -21,7 +21,7 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.analysis.aqi import AqiResult, station_aqi
+from app.analysis.aqi import DAILY, RUNNING, AqiResult, station_aqi
 from app.analysis.completeness import (
     RECEIVED,
     overall_pct,
@@ -130,10 +130,12 @@ def _frames(readings: pd.DataFrame, statuses: frozenset[str], hours: pd.Datetime
     return frames
 
 
-def _station_results(frames: Mapping[str, pd.DataFrame], end: datetime) -> dict[int, AqiResult]:
+def _station_results(
+    frames: Mapping[str, pd.DataFrame], end: datetime, mode: str = DAILY
+) -> dict[int, AqiResult]:
     stations = sorted({s for f in frames.values() for s in f.columns})
     return {
-        s: station_aqi({p: f[s] for p, f in frames.items() if s in f.columns}, end)
+        s: station_aqi({p: f[s] for p, f in frames.items() if s in f.columns}, end, mode)
         for s in stations
     }
 
@@ -169,6 +171,7 @@ def shadow_city_aqi(
     coords: Mapping[int, tuple[float, float]],
     hours: pd.DatetimeIndex,
     end: datetime,
+    mode: str = DAILY,
 ) -> ShadowResult:
     real = _frames(readings, RECEIVED, hours)
     filled_frames, low_frames, high_frames = {}, {}, {}
@@ -186,9 +189,9 @@ def shadow_city_aqi(
         high_frames[pollutant] = filled.where(~mask, filled + err)
         filled_n += int(mask.to_numpy().sum())
         unfilled_n += int(filled.isna().to_numpy().sum())
-    city = city_aqi(_station_results(filled_frames, end))
-    low = city_aqi(_station_results(low_frames, end)).aqi
-    high = city_aqi(_station_results(high_frames, end)).aqi
+    city = city_aqi(_station_results(filled_frames, end, mode))
+    low = city_aqi(_station_results(low_frames, end, mode)).aqi
+    high = city_aqi(_station_results(high_frames, end, mode)).aqi
     return ShadowResult(city, low, high, filled_n, unfilled_n, mae, val_n)
 
 
@@ -223,8 +226,11 @@ def build_city_day(session: Session, district: District, day: date, now: datetim
     )
     excluded = excluded_readings(day_rows) if not day_rows.empty else pd.DataFrame()
 
-    measured = city_aqi(_station_results(_frames(window_rows, frozenset({"ok"}), window), end))
-    shadow = shadow_city_aqi(window_rows, coords, window, end)
+    mode = RUNNING if end < day_end else DAILY  # today: index "now"; past days: daily
+    measured = city_aqi(
+        _station_results(_frames(window_rows, frozenset({"ok"}), window), end, mode)
+    )
+    shadow = shadow_city_aqi(window_rows, coords, window, end, mode)
     official = official_from_cpcb(session, district.id, day, end)
 
     computed_at = datetime.now(UTC)

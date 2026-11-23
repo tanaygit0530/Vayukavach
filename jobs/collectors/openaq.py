@@ -146,8 +146,24 @@ def station_row(loc: dict, district: DistrictRow, now: datetime) -> dict:
     }
 
 
+# OpenAQ labels gases from India's CPCB network as ppb/ppm, but the numbers are CPCB's
+# native units (ug/m3; mg/m3 for CO). Evidence (2026-11-23, Delhi stations, same hours):
+# treating them as ppb made NO2 1.92x and SO2 2.63x CPCB's own values (= MW/24.45), and
+# CO "ppb" medians were ~1.4 (a normal CO level in mg/m3). Read as native units, all three
+# match CPCB within ~1%.
+CPCB_NATIVE_PROVIDERS = frozenset({"CPCB"})
+
+
+def native_unit(pollutant: str) -> str:
+    return "mg/m3" if pollutant == "co" else "ug/m3"
+
+
 def parse_hours(
-    results: list[dict], station_id: int, pollutant: str, fetched_at: datetime
+    results: list[dict],
+    station_id: int,
+    pollutant: str,
+    fetched_at: datetime,
+    cpcb_native: bool = False,
 ) -> list[dict]:
     rows = []
     for item in results:
@@ -157,7 +173,10 @@ def parse_hours(
         if value is None or start is None or value < 0:
             continue
         unit_raw = (item.get("parameter") or {}).get("units") or "µg/m³"
-        std_value, unit = to_standard_unit(pollutant, float(value), unit_raw)
+        if cpcb_native and unit_raw.strip().lower() in {"ppb", "ppm"}:
+            std_value, unit = float(value), native_unit(pollutant)
+        else:
+            std_value, unit = to_standard_unit(pollutant, float(value), unit_raw)
         rows.append(
             {
                 "station_id": station_id,
@@ -182,7 +201,7 @@ def missing_rows(
     pollutant: str,
     fetched_at: datetime,
 ) -> list[dict]:
-    unit = "mg/m3" if pollutant == "co" else "ug/m3"
+    unit = native_unit(pollutant)
     return [
         {
             "station_id": station_id,
@@ -268,7 +287,8 @@ def run(session: Session, http: HttpClient, districts: list[DistrictRow], stats:
                         sensors_left += 1
                         continue
                     results = fetch_sensor_hours(http, int(sensor.external_id), start, end)
-                    ok = parse_hours(results, station_id, pollutant, now)
+                    cpcb_native = (loc.get("provider") or {}).get("name") in CPCB_NATIVE_PROVIDERS
+                    ok = parse_hours(results, station_id, pollutant, now, cpcb_native)
                     ok = [r for r in ok if start <= r["hour"] < end]
                     gaps = missing_rows({r["hour"] for r in ok}, start, end, station_id,
                                         pollutant, now)  # fmt: skip

@@ -73,9 +73,15 @@ def _float(raw) -> float | None:
 
 
 def parse_last_update(raw: str) -> datetime:
-    """'23-11-2026 16:00:00' (IST) -> UTC hour."""
+    """'23-11-2026 16:00:00' (IST) -> start of the hour it closes, in UTC.
+
+    `last_update` marks the END of the averaging period: values stamped 16:00 IST include the
+    hour 15:00-16:00 IST. Checked against OpenAQ hourly data for the same stations
+    (2026-11-23): windows ending at 16:00 IST match CPCB's sub-indices within ~1% for PM10,
+    NO2, SO2 and CO. So the reading belongs to the hour starting 15:00 IST (09:30 UTC).
+    """
     local = datetime.strptime(raw.strip(), "%d-%m-%Y %H:%M:%S")
-    return floor_hour((local - IST_OFFSET).replace(tzinfo=UTC))
+    return floor_hour((local - IST_OFFSET - timedelta(hours=1)).replace(tzinfo=UTC))
 
 
 def parse_records(records: list[dict]) -> tuple[list[CpcbRecord], int]:

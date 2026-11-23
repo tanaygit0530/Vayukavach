@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from app.analysis.aqi import (
+    DAILY,
     aqi_from_concentrations,
     category,
     station_aqi,
@@ -123,14 +124,20 @@ def test_24h_average_ignores_hours_outside_window_and_negatives():
     assert window_average(_hours(values), "pm25", END) == 100.0
 
 
-def test_8h_pollutants_use_max_running_mean():
-    values = [10.0] * 16 + [50.0] * 8  # last 8 hours high
-    assert window_average(_hours(values), "o3", END) == pytest.approx(50.0)
+def test_8h_running_mode_is_the_last_8_hours():
+    values = [10.0] * 8 + [90.0] * 8 + [20.0] * 8  # earlier peak, last 8 h low
+    assert window_average(_hours(values), "o3", END) == pytest.approx(20.0)
+
+
+def test_8h_daily_mode_is_the_max_running_mean():
+    values = [10.0] * 8 + [90.0] * 8 + [20.0] * 8
+    assert window_average(_hours(values), "o3", END, mode=DAILY) == pytest.approx(90.0)
 
 
 def test_8h_window_needs_6_hours():
-    values = [np.nan] * 19 + [50.0] * 5
+    values = [50.0] * 19 + [np.nan] * 3 + [50.0] * 2  # only 2 valid in the last 8
     assert window_average(_hours(values), "co", END) is None
+    assert window_average(_hours([np.nan] * 19 + [50.0] * 5), "co", END, mode=DAILY) is None
 
 
 def test_station_aqi_end_to_end():

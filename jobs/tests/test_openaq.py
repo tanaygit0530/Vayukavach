@@ -148,3 +148,18 @@ def test_recorded_hours_are_on_the_ist_grid_and_convert_ppb():
     raw = load("openaq_recorded_hours_no2_rkpuram.json")["results"][0]["value"]
     assert no2[0]["unit"] == "ug/m3"
     assert no2[0]["value"] == pytest.approx(raw * 46.01 / 24.45)
+
+
+def test_cpcb_network_ppb_is_read_as_native_units():
+    raw = load("openaq_recorded_hours_no2_rkpuram.json")["results"]
+    native = openaq.parse_hours(raw, 1, "no2", NOW, cpcb_native=True)
+    assert native[0]["value"] == raw[0]["value"] and native[0]["unit"] == "ug/m3"
+    co = openaq.parse_hours(load("openaq_hours_co.json")["results"], 1, "co", NOW,
+                            cpcb_native=True)  # fmt: skip
+    assert (co[0]["value"], co[0]["unit"]) == (1.2, "mg/m3")
+
+
+def test_other_providers_keep_unit_conversion():
+    raw = load("openaq_recorded_hours_no2_rkpuram.json")["results"]
+    converted = openaq.parse_hours(raw, 1, "no2", NOW, cpcb_native=False)
+    assert converted[0]["value"] == pytest.approx(raw[0]["value"] * 46.01 / 24.45)

@@ -7,7 +7,7 @@ in PMC7397983 (https://pmc.ncbi.nlm.nih.gov/articles/PMC7397983/table/table-1).
 
 Units: ug/m3, except CO in mg/m3.
 Averaging: 24 h for PM2.5, PM10, NO2, SO2, NH3 (at least 16 valid hours);
-8 h (daily maximum of running 8-h means) for CO and O3.
+8 h for CO and O3 (running index: last 8 h; daily index: maximum 8-h mean of the day).
 
 PROVISIONAL: CPCB lists the Severe band open-ended ("250+"). The upper concentration that maps
 to 500 below continues each pollutant's Very-poor slope (e.g. PM2.5 250 -> 380, PM10 430 -> 510).

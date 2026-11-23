@@ -86,19 +86,28 @@ def aqi_from_concentrations(averages: Mapping[str, float | None]) -> AqiResult:
     return AqiResult(round(subs[main]), main, rounded, reason is None, reason)
 
 
+RUNNING = "running"  # AQI "now": CPCB's hourly running index
+DAILY = "daily"  # AQI for a whole day
+
+
 def window_average(
-    hourly: pd.Series, pollutant: str, end: datetime, hours: int = 24
+    hourly: pd.Series, pollutant: str, end: datetime, hours: int = 24, mode: str = RUNNING
 ) -> float | None:
-    """Average for the `hours` hours before `end` (end exclusive), per CPCB rules.
+    """Average for the hours before `end` (end exclusive), per CPCB rules.
 
     `hourly` is indexed by hour start (tz-aware) with NaN for missing hours.
-    24-h pollutants: mean, if at least 16 valid hours.
-    CO and O3: maximum of the running 8-h means (each needing >= 6 valid hours).
+    24-h pollutants: mean of the last 24 h, if at least 16 valid hours.
+    CO and O3, mode 'running': mean of the last 8 h (>= 6 valid hours). This matches CPCB's
+      published running sub-indices (checked against the data.gov.in feed, 2026-11-23).
+    CO and O3, mode 'daily': maximum of the running 8-h means within the window.
     """
     start = end - timedelta(hours=hours)
     window = hourly[(hourly.index >= start) & (hourly.index < end)].astype(float)
     window = window[window >= 0]  # negative values are instrument errors
     if pollutant in EIGHT_HOUR:
+        if mode == RUNNING:
+            last8 = window[window.index >= end - timedelta(hours=8)]
+            return float(last8.mean()) if last8.count() >= MIN_HOURS_8H else None
         full = window.reindex(pd.date_range(start, end, freq="1h", inclusive="left"))
         rolling = full.rolling(8, min_periods=MIN_HOURS_8H).mean()
         best = rolling.max()
@@ -108,7 +117,9 @@ def window_average(
     return float(window.mean())
 
 
-def station_aqi(hourly_by_pollutant: Mapping[str, pd.Series], end: datetime) -> AqiResult:
+def station_aqi(
+    hourly_by_pollutant: Mapping[str, pd.Series], end: datetime, mode: str = RUNNING
+) -> AqiResult:
     """AQI for one station for the 24 h before `end`."""
-    averages = {p: window_average(s, p, end) for p, s in hourly_by_pollutant.items()}
+    averages = {p: window_average(s, p, end, mode=mode) for p, s in hourly_by_pollutant.items()}
     return aqi_from_concentrations(averages)

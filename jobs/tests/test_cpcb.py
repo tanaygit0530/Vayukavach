@@ -7,15 +7,18 @@ from collectors import cpcb
 from tests.conftest import load
 
 T0 = datetime(2026, 11, 23, 11, 5, tzinfo=UTC)
-SNAPSHOT_HOUR = datetime(2026, 11, 23, 10, 30, tzinfo=UTC)  # 16:00 IST
+SNAPSHOT_HOUR = datetime(2026, 11, 23, 9, 30, tzinfo=UTC)  # hour 15:00-16:00 IST
 
 
 def _raw():
     return load("cpcb_delhi.json")["records"]
 
 
-def test_parse_last_update_ist_to_utc():
+def test_last_update_is_the_end_of_the_hour():
+    # stamped 16:00 IST -> covers 15:00-16:00 IST -> hour starts 09:30 UTC
     assert cpcb.parse_last_update("23-11-2026 16:00:00") == SNAPSHOT_HOUR
+    assert cpcb.parse_last_update("24-11-2026 00:00:00") == datetime(2026, 11, 23, 17, 30,
+                                                                      tzinfo=UTC)  # fmt: skip
 
 
 def test_parse_dedupes_repeated_records_across_pages():
