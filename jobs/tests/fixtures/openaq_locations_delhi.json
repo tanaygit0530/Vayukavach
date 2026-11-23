@@ -63,6 +63,16 @@
       "units": "c",
       "displayName": null
      }
+    },
+    {
+     "id": 35,
+     "name": "pm25 µg/m³",
+     "parameter": {
+      "id": 2,
+      "name": "pm25",
+      "units": "µg/m³",
+      "displayName": "PM2.5"
+     }
     }
    ],
    "coordinates": {
@@ -78,10 +88,12 @@
    ],
    "distance": null,
    "datetimeFirst": {
-    "utc": "2026-11-23T00:30:00Z", "local": "2026-11-23T06:00:00+05:30"
+    "utc": "2026-11-23T00:30:00Z",
+    "local": "2026-11-23T06:00:00+05:30"
    },
    "datetimeLast": {
-    "utc": "2026-11-23T11:30:00Z", "local": "2026-11-23T17:00:00+05:30"
+    "utc": "2026-11-23T11:30:00Z",
+    "local": "2026-11-23T17:00:00+05:30"
    }
   },
   {

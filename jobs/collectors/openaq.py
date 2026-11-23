@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import Reading, Station
+from app.models import Reading, Sensor, Station
 from collectors.common import (
     BudgetExhausted,
     HttpClient,
@@ -39,6 +39,7 @@ PAGE_LIMIT = 1000
 INACTIVE_AFTER_DAYS = 7
 REQUESTS_PER_MINUTE = 55  # under the 60/min limit
 RUN_BUDGET = 1500  # under the 2,000/hour limit, leaves room for other callers
+SENSOR_REFRESH_HOURS = 24  # re-list a location's sensors at most once a day
 
 PARAMETERS = {"pm25": "pm25", "pm10": "pm10", "no2": "no2", "so2": "so2", "co": "co",
               "o3": "o3", "nh3": "nh3"}  # fmt: skip
@@ -69,7 +70,61 @@ def find_locations(http: HttpClient, district: DistrictRow) -> list[dict]:
             continue
         if haversine_km(lat, lon, district.lat, district.lon) <= RADIUS_KM:
             out.append(loc)
+    # Regulatory monitors first, so the request budget goes to them before low-cost sensors.
+    out.sort(key=lambda loc: (not loc.get("isMonitor"), loc["id"]))
     return out
+
+
+def sensor_rows(payload: dict, station_id: int, checked_at: datetime) -> list[dict]:
+    rows = []
+    for sensor in payload.get("results") or []:
+        param = sensor.get("parameter") or {}
+        pollutant = PARAMETERS.get(param.get("name"))
+        if not pollutant:
+            continue
+        first = (sensor.get("datetimeFirst") or {}).get("utc")
+        last = (sensor.get("datetimeLast") or {}).get("utc")
+        rows.append(
+            {
+                "station_id": station_id,
+                "source": "openaq",
+                "external_id": str(sensor["id"]),
+                "pollutant": pollutant,
+                "unit": param.get("units"),
+                "datetime_first": _parse_utc(first) if first else None,
+                "datetime_last": _parse_utc(last) if last else None,
+                "checked_at": checked_at,
+            }
+        )
+    return rows
+
+
+def refresh_sensors(session: Session, http: HttpClient, loc_id: int, station_id: int,
+                    now: datetime) -> None:  # fmt: skip
+    """Re-list a location's sensors if we have not done so in the last day."""
+    checked = session.execute(
+        select(func.max(Sensor.checked_at)).where(Sensor.station_id == station_id)
+    ).scalar()
+    if checked and checked > now - timedelta(hours=SENSOR_REFRESH_HOURS):
+        return
+    payload = http.get_json(f"{BASE}/locations/{loc_id}/sensors", {"limit": PAGE_LIMIT})
+    rows = sensor_rows(payload, station_id, now)
+    if rows:
+        upsert(session, Sensor.__table__, rows, ["source", "external_id"])
+
+
+def live_sensors(session: Session, station_id: int, now: datetime) -> list[Sensor]:
+    """Newest live sensor per pollutant; retired sensors (silent > 7 days) are ignored."""
+    cutoff = now - timedelta(days=INACTIVE_AFTER_DAYS)
+    sensors = session.execute(
+        select(Sensor)
+        .where(Sensor.station_id == station_id, Sensor.datetime_last >= cutoff)
+        .order_by(Sensor.pollutant, Sensor.datetime_last.desc(), Sensor.id.desc())
+    ).scalars()
+    best: dict[str, Sensor] = {}
+    for sensor in sensors:
+        best.setdefault(sensor.pollutant, sensor)
+    return list(best.values())
 
 
 def station_row(loc: dict, district: DistrictRow, now: datetime) -> dict:
@@ -86,6 +141,7 @@ def station_row(loc: dict, district: DistrictRow, now: datetime) -> dict:
         "lon": coords["longitude"],
         "district_id": district.id,
         "is_active": bool(last_dt and last_dt >= now - timedelta(days=INACTIVE_AFTER_DAYS)),
+        "is_reference": bool(loc.get("isMonitor")),
         "last_seen_at": last_dt,
     }
 
@@ -188,10 +244,9 @@ def run(session: Session, http: HttpClient, districts: list[DistrictRow], stats:
                 ).scalar_one()
                 if not row["is_active"]:
                     continue
-                for sensor in loc.get("sensors") or []:
-                    pollutant = PARAMETERS.get((sensor.get("parameter") or {}).get("name"))
-                    if not pollutant:
-                        continue
+                refresh_sensors(session, http, loc["id"], station_id, now)
+                for sensor in live_sensors(session, station_id, now):
+                    pollutant = sensor.pollutant
                     # Resume after the last real value (not after a 'missing' marker), so
                     # data that OpenAQ publishes late still fills earlier gaps.
                     last_ok = session.execute(
@@ -205,15 +260,14 @@ def run(session: Session, http: HttpClient, districts: list[DistrictRow], stats:
                         start = last_ok + timedelta(hours=1)
                     else:
                         start = end - timedelta(days=BACKFILL_DAYS)
-                    first = (loc.get("datetimeFirst") or {}).get("utc")
-                    if first:
-                        start = max(start, floor_hour(_parse_utc(first)))
+                    if sensor.datetime_first:
+                        start = max(start, floor_hour(sensor.datetime_first))
                     if start >= end:
                         continue
                     if http.rate_limit.exhausted:
                         sensors_left += 1
                         continue
-                    results = fetch_sensor_hours(http, sensor["id"], start, end)
+                    results = fetch_sensor_hours(http, int(sensor.external_id), start, end)
                     ok = parse_hours(results, station_id, pollutant, now)
                     ok = [r for r in ok if start <= r["hour"] < end]
                     gaps = missing_rows({r["hour"] for r in ok}, start, end, station_id,

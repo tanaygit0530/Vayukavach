@@ -66,7 +66,31 @@ class Station(Base):
     lon: Mapped[float | None] = mapped_column(Float)
     district_id: Mapped[int | None] = mapped_column(ForeignKey("districts.id"), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # True for regulatory monitors (all CPCB; OpenAQ isMonitor), False for low-cost sensors.
+    is_reference: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Sensor(Base):
+    """One instrument at a station (OpenAQ). Locations keep retired sensors next to live
+    ones, so collectors read only sensors whose datetime_last is recent."""
+
+    __tablename__ = "sensors"
+    __table_args__ = (
+        UniqueConstraint("source", "external_id", name="uq_sensors_source_external_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    station_id: Mapped[int] = mapped_column(
+        ForeignKey("stations.id", ondelete="CASCADE"), index=True
+    )
+    source: Mapped[str] = mapped_column(String(16))
+    external_id: Mapped[str] = mapped_column(String(64))
+    pollutant: Mapped[str] = mapped_column(String(8))
+    unit: Mapped[str | None] = mapped_column(String(16))  # as published, e.g. ppb
+    datetime_first: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    datetime_last: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Reading(Base):

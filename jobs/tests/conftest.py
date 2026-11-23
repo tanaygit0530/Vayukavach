@@ -91,6 +91,8 @@ def fixture_router(request: httpx.Request) -> httpx.Response:
     if host == "api.openaq.org":
         if path == "/v3/locations":
             return httpx.Response(200, json=load("openaq_locations_delhi.json"))
+        if path == "/v3/locations/8118/sensors":
+            return httpx.Response(200, json=load("openaq_location_8118_sensors.json"))
         if path == "/v3/sensors/23534/hours":
             return httpx.Response(200, json=load("openaq_hours_pm25.json"))
         if path == "/v3/sensors/23535/hours":

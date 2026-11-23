@@ -50,7 +50,7 @@ def truncate_all(engine: Engine) -> None:
     with engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE readings, model_air, weather, weather_daily, stations, districts,"
-                " fetch_log RESTART IDENTITY CASCADE"
+                "TRUNCATE readings, sensors, model_air, weather, weather_daily, stations,"
+                " districts, fetch_log RESTART IDENTITY CASCADE"
             )
         )

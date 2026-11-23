@@ -1,11 +1,13 @@
 from datetime import UTC, datetime
 
+import httpx
 import pytest
 from sqlalchemy import select
 
 from app.models import Reading, Station
 from collectors import openaq
 from collectors.common import RateLimit, RunStats
+from collectors.districts import DistrictRow
 from tests.conftest import fixture_router, load, mock_http
 
 NOW = datetime(2026, 11, 23, 12, 45, tzinfo=UTC)
@@ -38,6 +40,7 @@ def test_run_backfills_and_records_gaps(session, districts, api_keys, frozen):
 
     stations = {s.external_id: s for s in session.execute(select(Station)).scalars()}
     assert stations["8118"].is_active and not stations["9999"].is_active
+    assert stations["8118"].is_reference
 
     pm25 = (
         session.execute(select(Reading).where(Reading.pollutant == "pm25").order_by(Reading.hour))
@@ -88,3 +91,60 @@ def test_without_key_is_skipped(session, districts, monkeypatch):
     openaq.run(session, mock_http(fixture_router), districts, stats)
     get_settings.cache_clear()
     assert stats.skipped
+
+
+def test_retired_sensor_is_never_queried(session, districts, api_keys, frozen):
+    delhi = [d for d in districts if d.slug == "delhi"]
+    seen: list[str] = []
+
+    def spy(request):
+        seen.append(request.url.path)
+        return fixture_router(request)
+
+    openaq.run(session, mock_http(spy), delhi, RunStats())
+    assert "/v3/sensors/35/hours" not in seen  # last reading 2018
+    assert "/v3/sensors/23534/hours" in seen
+
+
+def test_sensor_list_is_refreshed_at_most_daily(session, districts, api_keys, frozen):
+    delhi = [d for d in districts if d.slug == "delhi"]
+    seen: list[str] = []
+
+    def spy(request):
+        seen.append(request.url.path)
+        return fixture_router(request)
+
+    openaq.run(session, mock_http(spy), delhi, RunStats())
+    openaq.run(session, mock_http(spy), delhi, RunStats())
+    assert seen.count("/v3/locations/8118/sensors") == 1
+
+
+def test_monitors_come_before_low_cost_sensors():
+    district = DistrictRow(1, "delhi", "Delhi", 28.6139, 77.209)
+    payload = load("openaq_recorded_locations_delhi.json")
+    http = mock_http(lambda r: httpx.Response(200, json=payload))
+    locs = openaq.find_locations(http, district)
+    flags = [bool(loc.get("isMonitor")) for loc in locs]
+    assert flags == sorted(flags, reverse=True)
+    assert all(openaq.haversine_km(
+        loc["coordinates"]["latitude"], loc["coordinates"]["longitude"], 28.6139, 77.209
+    ) <= openaq.RADIUS_KM for loc in locs)  # fmt: skip
+
+
+def test_recorded_sensor_list_keeps_only_pollutants():
+    rows = openaq.sensor_rows(load("openaq_recorded_location_17_sensors.json"), 1, NOW)
+    assert {r["pollutant"] for r in rows} == {"pm25", "pm10", "no2", "so2", "co", "o3"}
+    pm25 = [r for r in rows if r["pollutant"] == "pm25"]
+    assert len(pm25) == 2  # one live, one retired: live_sensors() picks the live one
+
+
+def test_recorded_hours_are_on_the_ist_grid_and_convert_ppb():
+    pm25 = openaq.parse_hours(
+        load("openaq_recorded_hours_pm25_rkpuram.json")["results"], 1, "pm25", NOW
+    )
+    assert pm25 and all(r["hour"].minute == 30 for r in pm25)
+    no2 = openaq.parse_hours(load("openaq_recorded_hours_no2_rkpuram.json")["results"], 1,
+                             "no2", NOW)  # fmt: skip
+    raw = load("openaq_recorded_hours_no2_rkpuram.json")["results"][0]["value"]
+    assert no2[0]["unit"] == "ug/m3"
+    assert no2[0]["value"] == pytest.approx(raw * 46.01 / 24.45)
