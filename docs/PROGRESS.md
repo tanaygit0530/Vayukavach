@@ -184,4 +184,40 @@ Tests: backend 86 passed, jobs 57 passed; ruff and ESLint clean.
   current CPCB bulletin before launch.
 - The cache and rate limit are per process; use Redis if the API runs on several instances.
 
-**Next:** Phase 4, Frontend shell and design system.
+
+## Phase 4: Frontend shell and design system — complete (2026-11-23)
+
+**Built** (`frontend/src`)
+- Tokens: CSS variables (`index.css`) and the Tailwind theme: Outfit 300–600, text #17212B / #5E6B77,
+  CPCB AQI colours, glass cards (white 90%, 14 px blur, 26 px radius, soft shadow), glass bubbles
+  (78%, 10 px blur), accent #1F9D55, amber stale colour, sky background with clouds, heat
+  gradient variables.
+- Shell: `AppShell`, `IconRail` (74 px; Air, Temperature, Heat, Maps, Ask, plus Alerts and
+  Profile; dark circle for the active tab; a bottom bar under 768 px), `Header` (location
+  button left; weather, IST clock and data label right), `PlacesDrawer` (covered cities with
+  AQI and temperature, Open-Meteo search marking uncovered places; closes on X, Escape, outside
+  click or choosing; focus trapped while open and returned to the button), original logo.
+- Shared UI: Card, MetricBubble, Pill, Tabs (ARIA, arrow keys), Skeleton, EmptyState ("No
+  reading for this hour"), EstimatedBadge (dashed), MeasuredBadge, StaleBadge (amber "Updated
+  3 h ago").
+- Routing: `/air`, `/temperature`, `/heat`, `/finder`, `/ask` (plus `/alerts`, `/profile`);
+  the place lives in `?place=` and localStorage. Data: TanStack Query, `VITE_API_BASE_URL`.
+- Backend: `GET /api/v1/places/districts` for the drawer.
+- Air tab preview: live AQI / main pollutant / visibility / completeness bubbles.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| Switch tabs | Pass: Vitest + Chromium; `?place=` kept across tabs |
+| Open and close Places | Pass: opens only from the location button; closes on X, Escape, outside click |
+| Choose a city; survives a page refresh | Pass: URL and localStorage updated; a reload and a fresh visit without `?place=` keep the city (Chromium) |
+
+Tests: frontend 10 (Vitest, in CI now), backend 138, jobs 59. Lint and type checks clean, no
+browser console errors. Check it at http://localhost:5180 (API on :8000).
+
+**Known issues**
+- The Air tab is a preview: the map, charts and cards come in Phase 5.
+- Bubbles stack one per row on phones; Phase 5 lays them out over the map.
+- Playwright Chromium is installed for screenshots; end-to-end tests come in Phase 12.
+
+**Next:** Phase 5, Air tab.
