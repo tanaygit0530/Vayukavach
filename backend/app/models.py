@@ -27,8 +27,8 @@ from app.db import Base
 
 # Pollutants measured at stations (India National AQI set).
 POLLUTANTS = ("pm25", "pm10", "no2", "so2", "co", "o3", "nh3")
-# Model-only extras (Open-Meteo CAMS).
-MODEL_POLLUTANTS = (*POLLUTANTS, "dust")
+# Model-only extras (Open-Meteo CAMS). co2 is context only, never part of India's AQI.
+MODEL_POLLUTANTS = (*POLLUTANTS, "dust", "co2")
 READING_STATUSES = ("ok", "missing", "excluded_over_999")
 STATION_SOURCES = ("cpcb", "openaq")
 
@@ -283,4 +283,33 @@ class DailyCitySummary(Base):
     excluded_count: Mapped[int] = mapped_column(Integer, default=0)
     near_limit_count: Mapped[int] = mapped_column(Integer, default=0)
 
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CityHourAqi(Base):
+    """Hour-by-hour city AQI (running index at the end of each hour).
+
+    official_*: CPCB published sub-indices (Measured).  measured_*: our AQI from reported
+    station concentrations (Measured).  shadow_*: with missing station-hours estimated
+    (Estimated).  cams_*: India AQI from the CAMS model, incl. forecast hours (Estimated).
+    """
+
+    __tablename__ = "city_hour_aqi"
+    __table_args__ = (UniqueConstraint("district_id", "hour", name="uq_city_hour_aqi"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    hour: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    official_aqi: Mapped[int | None] = mapped_column(Integer)
+    official_main_pollutant: Mapped[str | None] = mapped_column(String(8))
+    official_stations: Mapped[int] = mapped_column(Integer, default=0)
+    measured_aqi: Mapped[int | None] = mapped_column(Integer)
+    measured_main_pollutant: Mapped[str | None] = mapped_column(String(8))
+    measured_stations: Mapped[int] = mapped_column(Integer, default=0)
+    shadow_aqi: Mapped[int | None] = mapped_column(Integer)
+    shadow_aqi_low: Mapped[int | None] = mapped_column(Integer)
+    shadow_aqi_high: Mapped[int | None] = mapped_column(Integer)
+    cams_aqi: Mapped[int | None] = mapped_column(Integer)
+    cams_main_pollutant: Mapped[str | None] = mapped_column(String(8))
+    is_forecast: Mapped[bool] = mapped_column(Boolean, default=False)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

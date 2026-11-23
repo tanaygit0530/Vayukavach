@@ -30,6 +30,7 @@ AIR_VARIABLES = {
     "ozone": "o3",
     "ammonia": "nh3",
     "dust": "dust",
+    "carbon_dioxide": "co2",  # CAMS greenhouse-gas forecast; context only, not in India's AQI
 }
 
 HOURLY_WEATHER = {
@@ -98,11 +99,14 @@ def parse_air(payload, districts: Sequence[DistrictRow], fetched_at: datetime) -
                     continue
                 value = values[i]
                 unit = "ug/m3"
-                if value is not None and pollutant == "co":
+                if pollutant == "co":
                     # Open-Meteo gives CO in ug/m3; CPCB uses mg/m3.
-                    value, unit = value / 1000.0, "mg/m3"
-                elif pollutant == "co":
+                    value = None if value is None else value / 1000.0
                     unit = "mg/m3"
+                elif pollutant == "co2":
+                    if units.get(var) not in (None, "ppm"):
+                        raise ValueError(f"unexpected unit {units.get(var)!r} for {var}")
+                    unit = "ppm"
                 elif units.get(var) not in (None, "μg/m³", "µg/m³"):
                     raise ValueError(f"unexpected unit {units.get(var)!r} for {var}")
                 rows.append(

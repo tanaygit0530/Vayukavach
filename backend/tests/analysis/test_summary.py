@@ -42,14 +42,15 @@ def _seed(conn):
     level = np.linspace(100, 400, 24)  # pollution rises through the day
     rows = []
     for h_i, hour in enumerate(hours):
-        conn.execute(
-            text(
-                "INSERT INTO model_air (district_id, lat, lon, hour, pollutant, value, unit,"
-                " model_run, is_forecast, fetched_at) VALUES (:d, 28.6, 77.2, :h, 'pm25', :v,"
-                " 'ug/m3', :h, false, :h)"
-            ),  # fmt: skip
-            {"d": did, "h": hour, "v": float(level[h_i])},
-        )
+        for pollutant, factor in (("pm25", 1.0), ("pm10", 1.5), ("no2", 0.2)):
+            conn.execute(
+                text(
+                    "INSERT INTO model_air (district_id, lat, lon, hour, pollutant, value, unit,"
+                    " model_run, is_forecast, fetched_at) VALUES (:d, 28.6, 77.2, :h, :p, :v,"
+                    " 'ug/m3', :h, false, :h)"
+                ),
+                {"d": did, "h": hour, "p": pollutant, "v": float(level[h_i] * factor)},
+            )
         for s_i, sid in enumerate(ref):
             silent = s_i < 2 and h_i >= 18  # two of four go silent in the 6 worst hours
             for pollutant, factor in (("pm25", 1.0), ("pm10", 1.6), ("no2", 0.3)):
@@ -180,3 +181,25 @@ def test_official_figure_is_not_held_back_by_settling(db_engine):
         now = day_bounds(DAY)[0] + timedelta(hours=17, minutes=30)
         row = build_city_day(session, session.get(District, did), DAY, now)
     assert row["official_aqi"] == 310
+
+
+def test_city_hours_series(db_engine):
+    from app.analysis.summary import build_city_hours, floor_ist_hour
+    from app.models import CityHourAqi
+
+    with db_engine.begin() as conn:
+        did = _seed(conn)
+    with Session(db_engine) as session:
+        n = build_city_hours(session, session.get(District, did), NOW)
+        session.commit()
+        rows = {r.hour: r for r in session.execute(select(CityHourAqi)).scalars()}
+    assert n == len(rows) == 48
+    bulletin = day_bounds(DAY)[0] + timedelta(hours=16)
+    assert rows[bulletin].official_aqi == 310
+    last_day_hour = day_bounds(DAY)[1] - timedelta(hours=1)
+    assert rows[last_day_hour].measured_aqi is not None
+    assert rows[last_day_hour].shadow_aqi is not None
+    assert rows[last_day_hour].cams_aqi is not None  # 24 model hours -> running AQI
+    assert floor_ist_hour(datetime(2026, 11, 8, 10, 10, tzinfo=UTC)) == datetime(
+        2026, 11, 8, 9, 30, tzinfo=UTC
+    )

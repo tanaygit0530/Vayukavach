@@ -30,9 +30,10 @@ from app.analysis.completeness import (
     station_day_completeness,
 )
 from app.analysis.gap_bias import excluded_readings, hourly_missing_rate, missing_when_it_mattered
+from app.analysis.hourly import running_city_aqi
 from app.analysis.shadow import fill_missing, validate_holdout
 from app.analysis.time import day_bounds, day_hours
-from app.models import DailyCitySummary, District, StationDayCompleteness
+from app.models import CityHourAqi, DailyCitySummary, District, StationDayCompleteness
 
 BULLETIN_HOUR_IST = 16  # CPCB's daily AQI bulletin is the 4 PM value
 # Hourly data reaches OpenAQ 1-2 hours late; newer hours are not judged as missing yet.
@@ -312,6 +313,131 @@ def build_city_day(session: Session, district: District, day: date, now: datetim
     return row
 
 
+# ---------------------------------------------------------------- hourly series
+
+HOURLY_LOOKBACK_HOURS = 48
+AQI_POLLUTANTS = ("pm25", "pm10", "no2", "so2", "co", "o3", "nh3")
+
+
+def official_hourly(session: Session, district_id: int, start: datetime, end: datetime):
+    """Per hour: CPCB city AQI (mean of station max sub-indices) and main pollutant."""
+    rows = session.execute(
+        text(
+            "SELECT r.station_id, r.hour, r.pollutant, r.value FROM readings r"
+            " JOIN stations s ON s.id = r.station_id"
+            " WHERE s.district_id = :d AND s.source = 'cpcb' AND r.status = 'ok'"
+            " AND r.unit = 'aqi_subindex' AND r.hour >= :s AND r.hour < :e"
+        ),
+        {"d": district_id, "s": start, "e": end},
+    ).all()
+    if not rows:
+        return pd.DataFrame(columns=["aqi", "main_pollutant", "stations"])
+    df = pd.DataFrame(rows, columns=["station_id", "hour", "pollutant", "value"])
+    df["hour"] = pd.to_datetime(df["hour"], utc=True)
+    top = df.loc[df.groupby(["hour", "station_id"])["value"].idxmax()]
+    out = top.groupby("hour").agg(
+        aqi=("value", lambda v: int(round(float(v.round().mean())))),
+        main_pollutant=("pollutant", lambda p: p.value_counts().idxmax()),
+        stations=("station_id", "nunique"),
+    )
+    return out
+
+
+def cams_hourly(session: Session, district_id: int, start: datetime) -> pd.DataFrame:
+    rows = session.execute(
+        text(
+            "SELECT hour, pollutant, value, is_forecast FROM model_air WHERE district_id = :d"
+            " AND hour >= :s AND pollutant = ANY(:p) AND value IS NOT NULL"
+        ),
+        {"d": district_id, "s": start, "p": list(AQI_POLLUTANTS)},
+    ).all()
+    if not rows:
+        return pd.DataFrame(columns=["aqi", "main_pollutant", "stations"])
+    df = pd.DataFrame(rows, columns=["hour", "pollutant", "value", "is_forecast"])
+    df["hour"] = pd.to_datetime(df["hour"], utc=True)
+    frames = {
+        p: g.groupby("hour")["value"].mean().to_frame(name=0) for p, g in df.groupby("pollutant")
+    }
+    return running_city_aqi(frames)
+
+
+def build_city_hours(session: Session, district: District, now: datetime) -> int:
+    """Store the last 48 h (official / measured / shadow / CAMS) and CAMS forecast hours."""
+    end_live = floor_ist_hour(now)  # hours fully ended (CPCB feed: live)
+    end_settled = floor_ist_hour(now - timedelta(hours=SETTLE_HOURS))  # OpenAQ settled
+    out_start = end_live - timedelta(hours=HOURLY_LOOKBACK_HOURS)
+    warmup = out_start - timedelta(hours=24)
+
+    official = official_hourly(session, district.id, out_start, end_live)
+    known = load_reference_stations(session, district.id)
+    readings = load_readings(session, list(known), warmup, end_settled)
+    hours = pd.date_range(warmup, end_settled, freq="1h", inclusive="left")
+    measured = shadow = low = high = pd.DataFrame(columns=["aqi", "main_pollutant", "stations"])
+    if not readings.empty and len(hours):
+        coords = {s: c for s, c in known.items() if s in set(readings["station_id"])}
+        measured = running_city_aqi(_frames(readings, frozenset({"ok"}), hours))
+        real = _frames(readings, RECEIVED, hours)
+        filled, lows, highs = {}, {}, {}
+        for pollutant, frame in real.items():
+            f, mask = fill_missing(frame, coords)
+            err = validate_holdout(frame, coords).mae or 0.0
+            filled[pollutant] = f
+            lows[pollutant] = f.where(~mask, (f - err).clip(lower=0))
+            highs[pollutant] = f.where(~mask, f + err)
+        shadow = running_city_aqi(filled)
+        low = running_city_aqi(lows)
+        high = running_city_aqi(highs)
+    cams = cams_hourly(session, district.id, warmup)
+
+    def at(frame: pd.DataFrame, hour, col):
+        if hour not in frame.index:
+            return None
+        value = frame.at[hour, col]
+        return None if pd.isna(value) else (int(value) if col != "main_pollutant" else value)
+
+    computed_at = datetime.now(UTC)
+    all_hours = sorted(
+        {h for h in pd.date_range(out_start, end_live, freq="1h", inclusive="left")}
+        | {h for h in cams.index if h >= out_start}
+    )
+    rows = []
+    for hour in all_hours:
+        rows.append(
+            {
+                "district_id": district.id,
+                "hour": hour.to_pydatetime(),
+                "official_aqi": at(official, hour, "aqi"),
+                "official_main_pollutant": at(official, hour, "main_pollutant"),
+                "official_stations": at(official, hour, "stations") or 0,
+                "measured_aqi": at(measured, hour, "aqi"),
+                "measured_main_pollutant": at(measured, hour, "main_pollutant"),
+                "measured_stations": at(measured, hour, "stations") or 0,
+                "shadow_aqi": at(shadow, hour, "aqi"),
+                "shadow_aqi_low": at(low, hour, "aqi"),
+                "shadow_aqi_high": at(high, hour, "aqi"),
+                "cams_aqi": at(cams, hour, "aqi"),
+                "cams_main_pollutant": at(cams, hour, "main_pollutant"),
+                "is_forecast": hour >= end_live,
+                "computed_at": computed_at,
+            }
+        )
+    if rows:
+        stmt = insert(CityHourAqi).values(rows)
+        session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=["district_id", "hour"],
+                set_={k: stmt.excluded[k] for k in rows[0] if k not in ("district_id", "hour")},
+            )
+        )
+    return len(rows)
+
+
+def floor_ist_hour(ts: datetime) -> datetime:
+    """Start of the IST clock hour containing ts, in UTC (hh:30 UTC)."""
+    shifted = pd.Timestamp(ts).tz_convert("UTC") + pd.Timedelta(minutes=30)
+    return (shifted.floor("h") - pd.Timedelta(minutes=30)).to_pydatetime()
+
+
 def build_recent(session: Session, days: int = 2, now: datetime | None = None) -> list[dict]:
     """Summaries for the last `days` IST days (today included) for every district."""
     now = now or datetime.now(UTC)
@@ -322,5 +448,6 @@ def build_recent(session: Session, days: int = 2, now: datetime | None = None) -
             row = build_city_day(session, district, today - timedelta(days=offset), now)
             if row:
                 out.append(row)
+        build_city_hours(session, district, now)
     session.commit()
     return out

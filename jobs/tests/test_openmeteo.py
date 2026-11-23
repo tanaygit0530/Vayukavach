@@ -16,8 +16,8 @@ TWO = [DistrictRow(1, "delhi", "Delhi", 28.6139, 77.209), DistrictRow(2, "kanpur
 def test_parse_air_converts_times_and_co():
     rows = openmeteo.parse_air(load("openmeteo_air_delhi_kanpur.json"), TWO, FETCHED)
     payload = load("openmeteo_air_delhi_kanpur.json")[0]
-    # 144 hours x 8 variables x 2 locations
-    assert len(rows) == 144 * 8 * 2
+    # 144 hours x 9 variables x 2 locations
+    assert len(rows) == 144 * 9 * 2
     first_co = next(r for r in rows if r["pollutant"] == "co" and r["district_id"] == 1)
     assert first_co["unit"] == "mg/m3"
     assert first_co["value"] == payload["hourly"]["carbon_monoxide"][0] / 1000
@@ -57,6 +57,13 @@ def test_run_air_and_weather_store_and_are_idempotent(session, districts):
         openmeteo.run_air(session, http, two, RunStats())
         openmeteo.run_weather(session, http, two, RunStats())
         session.commit()
-    assert session.scalar(select(func.count()).select_from(ModelAir)) == 144 * 8 * 2
+    assert session.scalar(select(func.count()).select_from(ModelAir)) == 144 * 9 * 2
     assert session.scalar(select(func.count()).select_from(Weather)) == 408 * 2
     assert session.scalar(select(func.count()).select_from(WeatherDaily)) == 17 * 2
+
+
+def test_co2_is_stored_in_ppm():
+    rows = openmeteo.parse_air(load("openmeteo_air_delhi_kanpur.json"), TWO, FETCHED)
+    co2 = [r for r in rows if r["pollutant"] == "co2" and r["value"] is not None]
+    assert co2 and all(r["unit"] == "ppm" for r in co2)
+    assert all(380 < r["value"] < 600 for r in co2)
