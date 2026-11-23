@@ -103,7 +103,13 @@ def hourly(
 ):
     """Today's 24 IST hours: CPCB official, shadow estimate (past) and CAMS forecast (future)."""
     hours = _cached("air_hourly", district, now, lambda: air.air_hourly(session, district, now))
-    past = [h["hour"] for h in hours if h["official_aqi"] is not None]
+    # freshest past value of any kind: official, then shadow, then model estimate
+    past = [
+        h["hour"]
+        for h in hours
+        if not h["is_forecast"]
+        and (h["official_aqi"] or h["shadow_aqi"] or h["estimated_aqi"]) is not None
+    ]
     updated = past[-1] + timedelta(hours=1) if past else None
     return {
         "district": district.slug,

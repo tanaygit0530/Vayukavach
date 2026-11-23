@@ -7,7 +7,9 @@ import httpx
 from app.analysis.aqi import category, sub_index
 
 AIR_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
-GRID = 7  # 7 x 7 points
+# Open-Meteo counts every point as one call (free tier ~10,000/day). 5 x 5 = 25 per grid;
+# the frontend asks for a fixed box per district, so the 1-hour cache is shared by everyone.
+GRID = 5
 MAX_SPAN_DEG = 12.0
 
 

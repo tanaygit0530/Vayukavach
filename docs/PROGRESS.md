@@ -228,4 +228,51 @@ Mac via launchd (`jobs/scripts/install_cpcb_launchd.sh`); GitHub runs the new `c
 Verified: launchd run stored 3,964 CPCB rows in Supabase. Limitation: no CPCB data while the
 Mac sleeps (stored as missing hours).
 
-**Next:** Phase 5, Air tab.
+
+## Phase 5: Air tab — complete (2026-11-23)
+
+**Built** (`frontend/src/components/air`, `pages/AirPage.tsx`)
+- `PollutionMap` (Leaflet + OpenStreetMap, greyscale light tiles): blurred PM2.5 zones from the
+  CAMS grid, CPCB station pins (solid ring = measured, dashed = estimated from neighbours, grey
+  "!" = not reporting) with tooltips, green city pin, legend, layer / zoom / recentre buttons
+  (44 px), OSM and CAMS credits.
+- Floating `MetricBubble`s over the map (2×2 grid under the map on phones): AQI + category +
+  source (CPCB / Stations / Model), main pollutant, visibility (Estimated), data completeness
+  with shadow AQI and band.
+- `AqiChart` (hand-made SVG; Hourly / 10 days / Monthly): category-coloured bars, dashed outline
+  where the official reading is missing (shadow value), faded dashed forecast, "Now" line,
+  floating low–high bars with outlook placeholders, monthly bars with the current month
+  outlined; y axis 0–500; legend with words; per-bar hover tooltip; table view; scrolls
+  sideways on phones.
+- `PollutantBars` (30-segment bars to sub-index/500, Measured/Estimated, "No reading", CO₂ as
+  context), `WindCompass` (speed, gusts, direction, dispersion note), dark `HealthAdvice` (CPCB
+  wording + "Find cleaner air"), `SourceList` (empty state until Phase 9).
+- Colour accessibility: CPCB colours are mandated but fail colour-blind separation
+  (Satisfactory vs Moderate) and contrast on white (dataviz validator), so category words and
+  numbers always accompany colour, light bars get a darker outline, and the chart has a table view.
+
+**Fixes found while testing**
+- Station 24-h / 8-h averages now use settled hours (OpenAQ lag); before, Delhi's CO/O₃ fell
+  back to the model.
+- Hourly `updated_at` uses the freshest value of any kind (model-only districts were "stale").
+- Map grid: Open-Meteo counts each point as a call, so 5×5 points on a fixed box per district
+  (shared 1-hour cache) instead of 7×7 per viewport. API rate limit raised to 300/min (one page
+  load is about 10 calls).
+- A failed request now says "Couldn't load", never "No reading for this hour".
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| Air tab shows live stored data for any of the 10 cities | Pass: Chromium, all 10 cities fully loaded (AQI, 7 pollutants, chart), no console errors |
+| All three chart tabs work | Pass (Vitest + screenshots) |
+| Looks right on a laptop and a phone | Pass: 1440×900 and 390×844 checked against ref-04 / ref-06 |
+
+Tests: frontend 16, backend 138, jobs 59.
+
+**Known issues**
+- Pollution Sources is empty until Phase 9; days 6–10 empty until Phase 8.
+- Delhi has 82 pins and is busy at city zoom; clustering could come later.
+- The OpenAQ hourly run makes about one request per live sensor (~770, ~14 min). A
+  `/locations/{id}/latest` approach would cut that sharply (optimisation for later).
+
+**Next:** Phase 6, Temperature tab.

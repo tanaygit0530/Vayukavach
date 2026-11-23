@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.analysis.aqi import category, sub_index, window_average, window_sub_index
 from app.analysis.shadow import Neighbour, haversine_km, idw_estimate
-from app.analysis.summary import AQI_POLLUTANTS, floor_ist_hour
+from app.analysis.summary import AQI_POLLUTANTS, SETTLE_HOURS, floor_ist_hour
 from app.analysis.time import IST, day_bounds, ist_date
 from app.models import CityHourAqi, DailyCitySummary, District
 
@@ -180,7 +180,8 @@ UNITS = {"co": "mg/m3"}
 
 def air_pollutants(session: Session, district: District, now: datetime) -> dict:
     """24-h (8-h for CO/O3) values per pollutant: stations if any, else CAMS model."""
-    end = floor_ist_hour(now)  # hours fully ended
+    # Station data reaches OpenAQ 1-2 h late: average over settled hours only.
+    end = floor_ist_hour(now - timedelta(hours=SETTLE_HOURS))
     start = end - timedelta(hours=24)
     rows = session.execute(
         text(

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     telegram_bot_token: str = ""
     frontend_origin: str = "http://localhost:5180"
-    rate_limit_per_minute: int = 120
+    rate_limit_per_minute: int = 300  # one Air page load makes ~10 calls
 
 
 @lru_cache

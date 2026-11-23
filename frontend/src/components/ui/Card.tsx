@@ -24,7 +24,7 @@ export function Card({ title, subtitle, action, children, className, estimated, 
       aria-label={title}
     >
       {(title || action) && (
-        <header className="mb-4 flex items-start justify-between gap-3">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             {title && <h2 className="text-[17px] font-medium leading-tight">{title}</h2>}
             {subtitle && <p className="mt-1 text-[13px] text-ink-muted">{subtitle}</p>}

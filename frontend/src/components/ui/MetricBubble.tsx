@@ -12,6 +12,8 @@ interface MetricBubbleProps {
   detail?: ReactNode
   size?: number
   loading?: boolean
+  /** The request failed: say so, rather than implying there is no reading. */
+  error?: boolean
   estimated?: boolean
   stale?: boolean
   /** Ring colour, e.g. an AQI category colour. */
@@ -28,6 +30,7 @@ export function MetricBubble({
   detail,
   size = 176,
   loading,
+  error,
   estimated,
   stale,
   ringColor,
@@ -56,7 +59,9 @@ export function MetricBubble({
         </>
       ) : (
         <>
-          {value === null ? (
+          {error ? (
+            <p className="text-[13px] text-stale">Couldn’t load. Try again shortly.</p>
+          ) : value === null ? (
             <p className="text-[13px] text-ink-muted">No reading for this hour</p>
           ) : (
             <p className="leading-none">

@@ -96,3 +96,86 @@ export async function apiGet<T>(path: string, params?: Record<string, string>): 
   }
   return response.json() as Promise<T>
 }
+
+export interface AirHour {
+  hour: string
+  official_aqi: number | null
+  shadow_aqi: number | null
+  shadow_aqi_low: number | null
+  shadow_aqi_high: number | null
+  estimated_aqi: number | null
+  forecast_aqi: number | null
+  is_forecast: boolean
+  official_missing: boolean
+}
+
+export interface AirDay {
+  date: string
+  low: number | null
+  high: number | null
+  is_outlook: boolean
+  available: boolean
+  label: string
+}
+
+export interface AirMonth {
+  month: string
+  avg_aqi: number | null
+  days: number
+  is_current: boolean
+}
+
+export interface PollutantValue {
+  pollutant: string
+  value: number | null
+  unit: string
+  sub_index: number | null
+  label: 'measured' | 'estimated' | null
+  stations: number
+}
+
+export interface Co2 {
+  value: number
+  unit: string
+  hour: string
+  label: string
+  note: string
+}
+
+export interface StationPin {
+  id: number
+  name: string
+  lat: number
+  lon: number
+  aqi: number | null
+  category: string | null
+  category_key: string | null
+  main_pollutant: string | null
+  status: 'measured' | 'estimated' | 'silent'
+  last_seen_at: string | null
+}
+
+export interface Wind extends Meta {
+  speed_kmh: number | null
+  gusts_kmh: number | null
+  direction_deg: number | null
+  direction_compass: string | null
+  boundary_layer_m: number | null
+  note: string | null
+}
+
+export interface Advice extends Meta {
+  aqi: number | null
+  category: string | null
+  category_key: string | null
+  health_impact: string | null
+  advice_source: string
+}
+
+export interface MapCell {
+  lat: number
+  lon: number
+  pm25: number | null
+  pm25_sub_index: number | null
+  category_key: string | null
+}

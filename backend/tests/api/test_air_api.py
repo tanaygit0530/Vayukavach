@@ -86,6 +86,6 @@ def test_wind_and_advice(client):
 def test_air_map_grid_and_validation(client):
     body = client.get("/api/v1/air/map", params={"bbox": "76.8,28.4,77.4,28.9"}).json()
     assert_meta(body, "estimated")
-    assert len(body["cells"]) == 49 and body["cells"][0]["pm25_sub_index"] is not None
+    assert len(body["cells"]) == 25 and body["cells"][0]["pm25_sub_index"] is not None
     assert client.get("/api/v1/air/map", params={"bbox": "1,2,3"}).status_code == 422
     assert client.get("/api/v1/air/map", params={"bbox": "60,5,90,35"}).status_code == 422
