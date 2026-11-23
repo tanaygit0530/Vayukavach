@@ -1,19 +1,88 @@
 """Entry point for scheduled jobs: `uv run python run.py <job>`.
 
-Collectors are registered here as they are built (Phase 1).
+Jobs:
+  cpcb           CPCB real-time snapshot (data.gov.in)
+  openaq         OpenAQ v3 station history (90-day backfill, then incremental)
+  openmeteo-air  Open-Meteo CAMS air model, 5-day forecast
+  weather        Open-Meteo weather, hourly + daily, 16-day forecast
+  hourly         all of the above, each logged separately in fetch_log
+
+Exit code is 1 if any collector failed, so GitHub Actions marks the run red.
 """
 
-import sys
+from __future__ import annotations
 
-JOBS: dict[str, object] = {}
+import logging
+import sys
+from collections.abc import Callable
+
+from sqlalchemy.orm import Session
+
+from collectors import cpcb, openaq, openmeteo
+from collectors.common import HttpClient, RateLimit, fetch_run
+from collectors.districts import sync_districts
+
+log = logging.getLogger("vayukavach.jobs")
+
+Collector = Callable[..., None]
+
+
+def _http_for(name: str) -> HttpClient:
+    if name == "openaq":
+        return HttpClient(
+            rate_limit=RateLimit(per_minute=openaq.REQUESTS_PER_MINUTE, budget=openaq.RUN_BUDGET)
+        )
+    return HttpClient()
+
+
+COLLECTORS: dict[str, Collector] = {
+    "cpcb": cpcb.run,
+    "openaq": openaq.run,
+    "openmeteo-air": openmeteo.run_air,
+    "weather": openmeteo.run_weather,
+}
+GROUPS = {"hourly": ["cpcb", "openmeteo-air", "weather", "openaq"]}
+JOBS = sorted([*COLLECTORS, *GROUPS])
+
+
+def run_collectors(
+    session: Session,
+    names: list[str],
+    http_factory: Callable[[str], HttpClient] = _http_for,
+) -> dict[str, str]:
+    """Run collectors one by one; a failure in one does not stop the others."""
+    districts = sync_districts(session)
+    session.commit()
+    results: dict[str, str] = {}
+    for name in names:
+        try:
+            with fetch_run(session, name) as stats:
+                COLLECTORS[name](session, http_factory(name), districts, stats)
+            results[name] = "skipped" if stats.skipped else "ok"
+            log.info("%s: %s rows=%s %s", name, results[name], stats.rows, "; ".join(stats.notes))
+        except Exception:
+            log.exception("%s failed", name)
+            results[name] = "failed"
+    return results
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 2 or argv[1] not in JOBS:
-        print(f"usage: run.py <job>   available: {', '.join(sorted(JOBS)) or '(none yet)'}")
-        return 0 if len(argv) < 2 else 1
-    JOBS[argv[1]]()  # type: ignore[operator]
-    return 0
+    if len(argv) < 2:
+        print(f"usage: run.py <job>   available: {', '.join(JOBS)}")
+        return 0
+    job = argv[1]
+    if job not in COLLECTORS and job not in GROUPS:
+        print(f"unknown job {job!r}; available: {', '.join(JOBS)}")
+        return 1
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # httpx logs full URLs at INFO; data.gov.in puts the API key in the query string.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    from app.db import SessionLocal
+
+    with SessionLocal() as session:
+        results = run_collectors(session, GROUPS.get(job, [job]))
+    print(" ".join(f"{k}={v}" for k, v in results.items()))
+    return 1 if "failed" in results.values() else 0
 
 
 if __name__ == "__main__":

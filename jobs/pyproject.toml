@@ -9,7 +9,11 @@ dependencies = [
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.4",
+    "vayukavach-backend",
 ]
+
+[tool.uv.sources]
+vayukavach-backend = { path = "../backend", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
@@ -22,7 +26,7 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["collectors"]
+known-first-party = ["collectors", "app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

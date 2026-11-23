@@ -1,0 +1,142 @@
+{
+ "meta": {
+  "name": "openaq-api",
+  "website": "/",
+  "page": 1,
+  "limit": 1000,
+  "found": 2
+ },
+ "results": [
+  {
+   "id": 8118,
+   "name": "New Delhi",
+   "locality": "Delhi",
+   "timezone": "Asia/Kolkata",
+   "country": {
+    "id": 9,
+    "code": "IN",
+    "name": "India"
+   },
+   "owner": {
+    "id": 4,
+    "name": "Unknown Governmental Organization"
+   },
+   "provider": {
+    "id": 168,
+    "name": "CPCB"
+   },
+   "isMobile": false,
+   "isMonitor": true,
+   "instruments": [
+    {
+     "id": 2,
+     "name": "Government Monitor"
+    }
+   ],
+   "sensors": [
+    {
+     "id": 23534,
+     "name": "pm25 µg/m³",
+     "parameter": {
+      "id": 2,
+      "name": "pm25",
+      "units": "µg/m³",
+      "displayName": "PM2.5"
+     }
+    },
+    {
+     "id": 23535,
+     "name": "co ppm",
+     "parameter": {
+      "id": 8,
+      "name": "co",
+      "units": "ppm",
+      "displayName": "CO"
+     }
+    },
+    {
+     "id": 23536,
+     "name": "temperature c",
+     "parameter": {
+      "id": 100,
+      "name": "temperature",
+      "units": "c",
+      "displayName": null
+     }
+    }
+   ],
+   "coordinates": {
+    "latitude": 28.63576,
+    "longitude": 77.22445
+   },
+   "licenses": null,
+   "bounds": [
+    77.22445,
+    28.63576,
+    77.22445,
+    28.63576
+   ],
+   "distance": null,
+   "datetimeFirst": {
+    "utc": "2026-11-23T00:30:00Z", "local": "2026-11-23T06:00:00+05:30"
+   },
+   "datetimeLast": {
+    "utc": "2026-11-23T11:30:00Z", "local": "2026-11-23T17:00:00+05:30"
+   }
+  },
+  {
+   "id": 9999,
+   "name": "Old Closed Site",
+   "locality": "Delhi",
+   "timezone": "Asia/Kolkata",
+   "country": {
+    "id": 9,
+    "code": "IN",
+    "name": "India"
+   },
+   "owner": {
+    "id": 4,
+    "name": "Unknown Governmental Organization"
+   },
+   "provider": {
+    "id": 168,
+    "name": "CPCB"
+   },
+   "isMobile": false,
+   "isMonitor": true,
+   "instruments": [],
+   "sensors": [
+    {
+     "id": 40001,
+     "name": "pm25 µg/m³",
+     "parameter": {
+      "id": 2,
+      "name": "pm25",
+      "units": "µg/m³",
+      "displayName": "PM2.5"
+     }
+    }
+   ],
+   "coordinates": {
+    "latitude": 28.7,
+    "longitude": 77.1
+   },
+   "licenses": null,
+   "bounds": [
+    77.1,
+    28.7,
+    77.1,
+    28.7
+   ],
+   "distance": null,
+   "datetimeFirst": {
+    "utc": "2020-01-01T00:00:00Z",
+    "local": "2020-01-01T05:30:00+05:30"
+   },
+   "datetimeLast": {
+    "utc": "2026-10-01T00:00:00Z",
+    "local": "2026-10-01T05:30:00+05:30"
+   }
+  }
+ ]
+}

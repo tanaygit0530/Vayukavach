@@ -64,7 +64,7 @@ clear advice on what to do.
 ## Commands
 - Backend: `cd backend && uv sync && uv run uvicorn app.main:app --reload` · tests `uv run pytest` · lint `uv run ruff check .`
 - Migrations: `cd backend && uv run alembic upgrade head`
-- Jobs: `cd jobs && uv sync && uv run pytest`
+- Jobs: `cd jobs && uv sync && uv run pytest` · run collectors `uv run python run.py hourly`
 - Frontend: `cd frontend && npm install && npm run dev` (http://localhost:5180) · lint `npm run lint` · build `npm run build`
 - Database: `docker compose up -d db` (Postgres 16 on localhost:5433)
 

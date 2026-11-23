@@ -45,11 +45,37 @@ npm run dev                               # http://localhost:5180
 
 The Docker database uses host port **5433** so it does not clash with a local Postgres on 5432.
 
+## Data pipeline (Phase 1)
+
+```bash
+cd jobs
+uv run python run.py hourly         # cpcb, openmeteo-air, weather, openaq; each logged in fetch_log
+uv run python run.py weather        # or any single collector
+```
+
+| Table | Filled by | Notes |
+| --- | --- | --- |
+| `districts` | `jobs/config/districts.csv` (override with `DISTRICTS_FILE`) | 10 starter cities |
+| `stations`, `readings` | `cpcb`, `openaq` | One row per station, hour and pollutant. Missing data = `value NULL`, `status='missing'`, plus `reason` |
+| `model_air` | `openmeteo-air` | CAMS model, past day + 5-day forecast (Estimated) |
+| `weather`, `weather_daily` | `weather` | Past day + 16-day forecast |
+| `fetch_log` | every collector | `ok`, `failed` or `skipped` (no API key) |
+
+**Hour keys:** every `hour` is the start of an India (IST) clock hour, stored as a UTC
+timestamp, so it falls at hh:30 UTC. CPCB, OpenAQ and Open-Meteo values for the same hour line up.
+
+**CPCB values are AQI sub-indices**, not concentrations (unit `aqi_subindex`): that is what the
+data.gov.in real-time feed publishes. Concentrations come from OpenAQ (µg/m³, CO in mg/m³).
+
+**Scheduled runs:** `.github/workflows/collect-hourly.yml` runs at minute 10 of every hour.
+Add the repository secrets `DATABASE_URL` (Supabase), `DATA_GOV_IN_API_KEY` and `OPENAQ_API_KEY`;
+until `DATABASE_URL` is set the workflow skips itself.
+
 ## Checks
 
 ```bash
 cd backend  && uv run ruff check . && uv run ruff format --check . && uv run pytest
-cd jobs     && uv run ruff check . && uv run pytest
+cd jobs     && uv run ruff check . && uv run pytest     # needs the docker Postgres
 cd frontend && npm run lint && npm run build
 ```
 
