@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import pandas as pd
 
+from app.analysis.aqi import sub_index
 from app.analysis.validate_cpcb import compare, link_stations, normalise_name, report
 from tests.analysis.helpers import HOURS
 
@@ -55,6 +56,10 @@ def test_window_ends_with_the_reported_hour():
          "value": [0.0]}
     )  # fmt: skip
     ours = compare(cpcb, conc, {1: 10}).rows["ours"].iloc[0]
-    # mean = (23*50 + 500)/24 = 68.75 -> includes the last hour
-    assert ours == round((200 - 101) / (90 - 61) * (68.75 - 61) + 101)
+    # mean of hourly sub-indices, including the reported hour itself
+    assert ours == round((23 * sub_index("pm25", 50.0) + sub_index("pm25", 500.0)) / 24)
+    without_last = (
+        compare(cpcb.assign(hour=[HOURS[-2]]), conc, {1: 10}).rows["ours"].iloc[0]
+    )  # window ending one hour earlier misses the 500
+    assert without_last < ours
     assert HOURS[-1] + timedelta(hours=1) > HOURS[-1]

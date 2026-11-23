@@ -35,6 +35,8 @@ from app.analysis.time import day_bounds, day_hours
 from app.models import DailyCitySummary, District, StationDayCompleteness
 
 BULLETIN_HOUR_IST = 16  # CPCB's daily AQI bulletin is the 4 PM value
+# Hourly data reaches OpenAQ 1-2 hours late; newer hours are not judged as missing yet.
+SETTLE_HOURS = 2
 COLUMNS = ["station_id", "hour", "pollutant", "status", "value"]
 
 
@@ -201,19 +203,24 @@ def shadow_city_aqi(
 def build_city_day(session: Session, district: District, day: date, now: datetime) -> dict | None:
     """Compute and store the summary for one district and IST day. Returns the row."""
     day_start, day_end = day_bounds(day)
-    hours_done = day_hours(day, now)
+    settled = now - timedelta(hours=SETTLE_HOURS)
+    hours_done = day_hours(day, settled)
     if len(hours_done) == 0:
         return None
     end = hours_done[-1].to_pydatetime() + timedelta(hours=1)
     window = pd.date_range(end - timedelta(hours=24), end, freq="1h", inclusive="left")
 
-    coords = load_reference_stations(session, district.id)
-    readings = load_readings(session, list(coords), min(window[0], day_start), end)
+    known = load_reference_stations(session, district.id)
+    readings = load_readings(session, list(known), min(window[0], day_start), end)
+    # Only stations with any row in the window are expected to report (others have not
+    # been collected yet, or retired).
+    with_data = set(readings["station_id"].unique()) if not readings.empty else set()
+    coords = {s: c for s, c in known.items() if s in with_data}
     day_rows = readings[readings["hour"] >= day_start] if not readings.empty else readings
     window_rows = readings[readings["hour"] >= window[0]] if not readings.empty else readings
 
-    per_station = station_day_completeness(day_rows, day, now)
-    silence = silence_report(silent_matrix(day_rows, day, now))
+    per_station = station_day_completeness(day_rows, day, settled)
+    silence = silence_report(silent_matrix(day_rows, day, settled))
 
     level = load_model_pm25(session, district.id, day_start, end)
     level_source = "cams"
@@ -222,7 +229,7 @@ def build_city_day(session: Session, district: District, day: date, now: datetim
         level = pm.groupby("hour")["value"].mean()
         level_source = "stations"
     gap = missing_when_it_mattered(
-        level, hourly_missing_rate(day_rows, day, now, pollutants={"pm25", "pm10"})
+        level, hourly_missing_rate(day_rows, day, settled, pollutants={"pm25", "pm10"})
     )
     excluded = excluded_readings(day_rows) if not day_rows.empty else pd.DataFrame()
 
@@ -231,7 +238,8 @@ def build_city_day(session: Session, district: District, day: date, now: datetim
         _station_results(_frames(window_rows, frozenset({"ok"}), window), end, mode)
     )
     shadow = shadow_city_aqi(window_rows, coords, window, end, mode)
-    official = official_from_cpcb(session, district.id, day, end)
+    # CPCB's feed is a live snapshot (no publishing lag): use every hour up to now.
+    official = official_from_cpcb(session, district.id, day, min(now, day_end))
 
     computed_at = datetime.now(UTC)
     row = {

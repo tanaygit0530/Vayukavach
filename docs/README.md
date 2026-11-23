@@ -66,6 +66,23 @@ timestamp, so it falls at hh:30 UTC. CPCB, OpenAQ and Open-Meteo values for the 
 
 **CPCB values are AQI sub-indices**, not concentrations (unit `aqi_subindex`): that is what the
 data.gov.in real-time feed publishes. Concentrations come from OpenAQ (µg/m³, CO in mg/m³).
+CPCB's `last_update` is the **end** of the averaging hour, so a value stamped 16:00 IST is
+stored for the hour starting 15:00 IST.
+
+**OpenAQ units for CPCB-network stations:** OpenAQ labels their gases "ppb", but the numbers
+are CPCB's native µg/m³ (mg/m³ for CO). The collector stores them as native units; other
+providers are converted from ppb/ppm normally.
+
+## Analysis (Phase 2)
+
+| Module | What it does |
+| --- | --- |
+| `backend/app/analysis/aqi.py` | India National AQI: CPCB breakpoints, 24 h means (≥ 16 h), CO/O₃ 8 h (running or daily max), validity rule (≥ 3 pollutants incl. PM) |
+| `completeness.py` | Received / expected hours per station, pollutant, day; stations silent 3+ h; hours with ≥ 25 % of a city's stations silent |
+| `gap_bias.py` | "Missing when it mattered": missing rate in the 6 most polluted hours vs the 6 cleanest (flag at 20 pp); readings at or near 999 µg/m³ |
+| `shadow.py` | Inverse-distance fill from stations within 15 km (+ CAMS difference), hold-out validation (MAE) used as the ± band |
+| `summary.py` | Writes `daily_city_summary` (official vs measured vs shadow AQI) and `station_day_completeness`; run by `run.py summarize` |
+| `validate_cpcb.py` | Compares our sub-indices with CPCB's published ones: `uv run python -m app.analysis.validate_cpcb docs/validation/aqi_vs_cpcb.md` |
 
 **Scheduled runs:** `.github/workflows/collect-hourly.yml` runs at minute 10 of every hour.
 Add the repository secrets `DATABASE_URL` (Supabase), `DATA_GOV_IN_API_KEY` and `OPENAQ_API_KEY`;

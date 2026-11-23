@@ -20,6 +20,7 @@ from app.models import Reading, Sensor, Station
 from collectors.common import (
     BudgetExhausted,
     HttpClient,
+    HTTPFailure,
     RunStats,
     concentration_status,
     floor_hour,
@@ -263,7 +264,13 @@ def run(session: Session, http: HttpClient, districts: list[DistrictRow], stats:
                 ).scalar_one()
                 if not row["is_active"]:
                     continue
-                refresh_sensors(session, http, loc["id"], station_id, now)
+                try:
+                    refresh_sensors(session, http, loc["id"], station_id, now)
+                except HTTPFailure as exc:
+                    # One broken location must not stop the run; retry it next hour.
+                    stats.errors += 1
+                    stats.notes.append(f"location {loc['id']} skipped: {exc}")
+                    continue
                 for sensor in live_sensors(session, station_id, now):
                     pollutant = sensor.pollutant
                     # Resume after the last real value (not after a 'missing' marker), so
@@ -286,7 +293,12 @@ def run(session: Session, http: HttpClient, districts: list[DistrictRow], stats:
                     if http.rate_limit.exhausted:
                         sensors_left += 1
                         continue
-                    results = fetch_sensor_hours(http, int(sensor.external_id), start, end)
+                    try:
+                        results = fetch_sensor_hours(http, int(sensor.external_id), start, end)
+                    except HTTPFailure as exc:
+                        stats.errors += 1
+                        stats.notes.append(f"sensor {sensor.external_id} skipped: {exc}")
+                        continue
                     cpcb_native = (loc.get("provider") or {}).get("name") in CPCB_NATIVE_PROVIDERS
                     ok = parse_hours(results, station_id, pollutant, now, cpcb_native)
                     ok = [r for r in ok if start <= r["hour"] < end]

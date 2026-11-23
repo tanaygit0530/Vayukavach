@@ -19,7 +19,12 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.analysis.aqi import sub_index, window_average
+from app.analysis.aqi import (
+    CONCENTRATION_MEAN,
+    CPCB_FEED,
+    DEFAULT_METHOD,
+    window_sub_index,
+)
 from app.analysis.shadow import haversine_km
 
 LINK_MAX_KM = 0.5
@@ -80,7 +85,10 @@ class Comparison:
 
 
 def compare(
-    cpcb_subindices: pd.DataFrame, concentrations: pd.DataFrame, links: dict[int, int]
+    cpcb_subindices: pd.DataFrame,
+    concentrations: pd.DataFrame,
+    links: dict[int, int],
+    method: str = DEFAULT_METHOD,
 ) -> Comparison:
     """cpcb_subindices: station_id, station, hour, pollutant, value (sub-index).
     concentrations: station_id, hour, pollutant, value (ug/m3, CO mg/m3), real values only."""
@@ -92,8 +100,7 @@ def compare(
         series = grouped.get((oq, r.pollutant)) if oq is not None else None
         if series is None:
             continue
-        avg = window_average(series, r.pollutant, r.hour + timedelta(hours=1))
-        ours = sub_index(r.pollutant, avg)
+        ours = window_sub_index(series, r.pollutant, r.hour + timedelta(hours=1), method=method)
         if ours is None:
             continue
         out.append((r.station, r.hour, r.pollutant, float(r.value), round(ours)))
@@ -102,7 +109,7 @@ def compare(
     return Comparison(rows)
 
 
-def run(session: Session) -> Comparison:
+def run(session: Session, method: str = DEFAULT_METHOD) -> Comparison:
     stations = pd.DataFrame(
         session.execute(
             text(
@@ -131,7 +138,7 @@ def run(session: Session) -> Comparison:
         columns=["station_id", "station", "hour", "pollutant", "value"],
     )
     if cpcb.empty:
-        return compare(cpcb, cpcb, links)
+        return compare(cpcb, cpcb, links, method)
     cpcb["hour"] = pd.to_datetime(cpcb["hour"], utc=True)
     start = cpcb["hour"].min() - timedelta(hours=25)
     conc = pd.DataFrame(
@@ -145,7 +152,7 @@ def run(session: Session) -> Comparison:
         columns=["station_id", "hour", "pollutant", "value"],
     )
     conc["hour"] = pd.to_datetime(conc["hour"], utc=True)
-    return compare(cpcb, conc, links)
+    return compare(cpcb, conc, links, method)
 
 
 def report(result: Comparison) -> str:
@@ -153,8 +160,10 @@ def report(result: Comparison) -> str:
         "# India AQI vs CPCB published sub-indices",
         "",
         f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC. Our sub-index: CPCB breakpoints on"
-        " OpenAQ hourly concentrations (24 h mean, >= 16 h; CO/O3 max 8 h mean).",
-        "CPCB: `avg_value` sub-index from the data.gov.in real-time feed, same station and hour.",
+        " OpenAQ hourly concentrations of the same station. 24-h pollutants: mean of the hourly"
+        " sub-indices (>= 16 h); CO/O3: sub-index of the 8-h running mean.",
+        "CPCB: `avg_value` sub-index from the data.gov.in real-time feed, same station and hour"
+        " (`last_update` = end of the hour).",
         "",
         "## Per pollutant (difference = ours - CPCB, AQI points)",
         "",
@@ -188,11 +197,25 @@ def report(result: Comparison) -> str:
     return "\n".join(lines) + "\n"
 
 
+def method_table(session: Session) -> str:
+    lines = ["", "## Averaging method check (all pollutants pooled per method)", "",
+             "| Method | n | MAE | Bias |", "| --- | --- | --- | --- |"]  # fmt: skip
+    for method in (CPCB_FEED, CONCENTRATION_MEAN):
+        d = run(session, method).rows
+        if d.empty:
+            continue
+        for pollutant in ("pm25", "pm10"):
+            x = d[d.pollutant == pollutant]["diff"]
+            lines.append(f"| {method} ({pollutant}) | {len(x)} | {x.abs().mean():.1f} |"
+                         f" {x.mean():+.1f} |")  # fmt: skip
+    return "\n".join(lines) + "\n"
+
+
 def main(argv: list[str]) -> int:
     from app.db import SessionLocal
 
     with SessionLocal() as session:
-        text_out = report(run(session))
+        text_out = report(run(session)) + method_table(session)
     if len(argv) > 1:
         Path(argv[1]).parent.mkdir(parents=True, exist_ok=True)
         Path(argv[1]).write_text(text_out, encoding="utf-8")

@@ -114,14 +114,15 @@ def test_city_day_summary_end_to_end(db_engine):
     assert row["shadow_mae_pm25"] is not None and row["shadow_validation_n"] > 0
     assert stored.shadow_aqi == row["shadow_aqi"]
     assert per_station == 4 * 3
+    assert row["stations_total"] == 4
 
 
 def test_rebuild_is_idempotent(db_engine):
     with db_engine.begin() as conn:
         _seed(conn)
     with Session(db_engine) as session:
-        build_recent(session, days=1, now=NOW - timedelta(hours=2, minutes=1))
-        build_recent(session, days=1, now=NOW - timedelta(hours=2, minutes=1))
+        build_recent(session, days=1, now=NOW - timedelta(hours=3))
+        build_recent(session, days=1, now=NOW - timedelta(hours=3))
         assert session.scalar(select(func.count()).select_from(DailyCitySummary)) == 1
 
 
@@ -131,7 +132,8 @@ def test_partial_day_counts_only_finished_hours(db_engine):
     with Session(db_engine) as session:
         now = day_bounds(DAY)[0] + timedelta(hours=10, minutes=20)
         row = build_city_day(session, session.get(District, did), DAY, now)
-    assert row["is_partial_day"] and row["hours_covered"] == 10
+    # 10 hours finished, the last 2 are still settling (data arrives late)
+    assert row["is_partial_day"] and row["hours_covered"] == 8
     assert row["completeness_pct"] == 100.0
 
 
@@ -152,3 +154,29 @@ def test_no_data_day_is_skipped(db_engine):
         before_day = datetime(2026, 11, 7, 18, 0, tzinfo=UTC)  # 23:30 IST, before DAY starts
         assert build_city_day(session, session.scalars(select(District)).one(), DAY,
                               before_day) is None  # fmt: skip
+
+
+def test_stations_without_any_data_are_not_counted(db_engine):
+    with db_engine.begin() as conn:
+        did = _seed(conn)
+        conn.execute(
+            text(
+                "INSERT INTO stations (source, external_id, name, lat, lon, district_id,"
+                " is_reference) VALUES ('openaq', 'new', 'Not collected yet', 28.6, 77.2, :d,"
+                " true)"
+            ),  # fmt: skip
+            {"d": did},
+        )
+    with Session(db_engine) as session:
+        row = build_city_day(session, session.get(District, did), DAY, NOW)
+    assert row["stations_total"] == 4 and row["completeness_pct"] == 87.5
+
+
+def test_official_figure_is_not_held_back_by_settling(db_engine):
+    with db_engine.begin() as conn:
+        did = _seed(conn)
+    with Session(db_engine) as session:
+        # 16:30 IST: the bulletin hour (16:00) is in the feed; OpenAQ hours still settling
+        now = day_bounds(DAY)[0] + timedelta(hours=17, minutes=30)
+        row = build_city_day(session, session.get(District, did), DAY, now)
+    assert row["official_aqi"] == 310

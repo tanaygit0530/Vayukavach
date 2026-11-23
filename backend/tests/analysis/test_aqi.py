@@ -142,10 +142,33 @@ def test_8h_window_needs_6_hours():
 
 def test_station_aqi_end_to_end():
     hourly = {
-        "pm25": _hours([150.0] * 24),
+        "pm25": _hours([150.0] * 24),  # constant: both averaging methods give 323
         "pm10": _hours([200.0] * 24),
         "no2": _hours([50.0] * 24),
         "co": _hours([1.5] * 24),
     }
     result = station_aqi(hourly, END)
     assert result.valid and result.aqi == 323 and result.sub_indices["co"] == 73
+
+
+def test_cpcb_feed_method_averages_hourly_sub_indices():
+    from app.analysis.aqi import CONCENTRATION_MEAN, window_sub_index
+
+    # 12 h at 100 and 12 h at 200 ug/m3 PM2.5: mean concentration 150 -> 323,
+    # but mean of sub-indices = (233.4 + 361.9) / 2 = 297.7
+    hourly = _hours([100.0] * 12 + [200.0] * 12)
+    feed = window_sub_index(hourly, "pm25", END)
+    textbook = window_sub_index(hourly, "pm25", END, method=CONCENTRATION_MEAN)
+    assert round(textbook) == 323
+    expected = (sub_index("pm25", 100.0) + sub_index("pm25", 200.0)) / 2
+    assert feed == pytest.approx(expected)
+    assert feed < textbook  # the PM2.5 scale flattens above 120 ug/m3
+
+
+def test_methods_agree_inside_one_band():
+    from app.analysis.aqi import CONCENTRATION_MEAN, window_sub_index
+
+    hourly = _hours([130.0] * 12 + [200.0] * 12)  # both in 121-250
+    assert window_sub_index(hourly, "pm25", END) == pytest.approx(
+        window_sub_index(hourly, "pm25", END, method=CONCENTRATION_MEAN)
+    )

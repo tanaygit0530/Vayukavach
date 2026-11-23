@@ -163,3 +163,30 @@ def test_other_providers_keep_unit_conversion():
     raw = load("openaq_recorded_hours_no2_rkpuram.json")["results"]
     converted = openaq.parse_hours(raw, 1, "no2", NOW, cpcb_native=False)
     assert converted[0]["value"] == pytest.approx(raw[0]["value"] * 46.01 / 24.45)
+
+
+def test_one_broken_location_does_not_fail_the_run(session, districts, api_keys, frozen):
+    delhi = [d for d in districts if d.slug == "delhi"]
+
+    def handler(request):
+        if request.url.path == "/v3/locations/8118/sensors":
+            return httpx.Response(500)
+        return fixture_router(request)
+
+    stats = RunStats()
+    openaq.run(session, mock_http(handler, attempts=2), delhi, stats)
+    assert stats.errors == 1 and any("8118 skipped" in n for n in stats.notes)
+
+
+def test_one_broken_sensor_does_not_fail_the_run(session, districts, api_keys, frozen):
+    delhi = [d for d in districts if d.slug == "delhi"]
+
+    def handler(request):
+        if request.url.path == "/v3/sensors/23534/hours":
+            return httpx.Response(500)
+        return fixture_router(request)
+
+    stats = RunStats()
+    openaq.run(session, mock_http(handler, attempts=2), delhi, stats)
+    co = session.execute(select(Reading).where(Reading.pollutant == "co")).scalars().all()
+    assert stats.errors == 1 and len(co) == 12  # the other sensor still stored

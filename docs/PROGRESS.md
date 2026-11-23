@@ -29,7 +29,17 @@ Tests: backend 1 passed, jobs 2 passed; ruff, ESLint and `vite build` clean.
 - The build prompts file is named `VayuKavach Phase-wise Build Prompts.md`, not `BUILD_PROMPTS.md`.
 
 
-## Phase 1: Hourly data pipeline — built; live station data blocked on API keys (2026-11-23)
+## Phase 1: Hourly data pipeline — complete except the spaced-run check (2026-11-23)
+
+Update after the API keys arrived: CPCB live pull stored 3,978 station-pollutant rows (570
+stations, all India; 9 of the 10 cities). **Shimla has no live CPCB station** (nearest:
+Baddi, ~35 km, not counted). OpenAQ backfill: 48+ Delhi monitors with 90 days of hours;
+other cities continue over the next hourly runs (1,500 requests per run). OpenAQ fixes:
+retired sensors skipped via a `sensors` table (refreshed daily), monitors first,
+`stations.is_reference`, a broken location or sensor no longer fails the run.
+Three runs spaced one hour apart are scheduled for 18:10, 19:10 and 20:10 IST.
+
+### Original Phase 1 notes
 
 **Built**
 - Alembic migration `0001`: `districts`, `stations`, `readings`, `model_air`, `weather`,
@@ -77,4 +87,56 @@ ruff and ESLint clean. GitHub CI green on `1bfcc59`.
 - Weather and model rows are overwritten by newer runs (latest analysis/forecast wins);
   forecast-vs-actual history for Phase 8 may need a separate snapshot table.
 
-**Next:** Phase 2, AQI calculator, completeness and shadow AQI.
+
+## Phase 2: AQI calculator, completeness and shadow AQI — complete (2026-11-23)
+
+**Built** (`backend/app/analysis/`, pure functions plus tests)
+- `aqi_breakpoints.py`, `aqi.py`: India National AQI. CPCB breakpoints in one config file
+  (lower bands checked against IES Arthapedia and PMC7397983; the Severe band's top is
+  provisional). 24-h pollutants need at least 16 h; CO/O₃ use the 8-h running mean (daily
+  mode: the day's max 8-h mean). An AQI needs at least 3 pollutants including PM. 24-h
+  sub-index = **mean of hourly sub-indices** (CPCB's published method, see below).
+- `completeness.py`: received / expected hours per station, pollutant and IST day; stations
+  silent 3+ consecutive hours; hours when at least 25% of a city's stations were silent.
+- `gap_bias.py`: missing rate in the 6 most polluted hours (CAMS PM2.5) vs the 6 cleanest;
+  flag at 20 pp (configurable); PM readings at or near 999 µg/m³.
+- `shadow.py`: inverse-distance fill from reporting stations within 15 km (with the CAMS
+  difference term); 10% hold-out validation gives MAE, used as the ± band.
+- `summary.py` → tables `daily_city_summary` (official vs measured vs shadow AQI,
+  completeness, silence, gap flags, excluded counts) and `station_day_completeness`;
+  `run.py summarize` (also in `hourly`). Real readings are never modified.
+- `validate_cpcb.py` → `docs/validation/aqi_vs_cpcb.md`.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| AQI matches CPCB's published values within a few points | **Mostly pass.** 40 Delhi station-hours: station AQI MAE 7.4 points, 90% within ±10. Per pollutant MAE: SO₂ 0.2, O₃ 1.1, NO₂ 1.7, PM10 3.6, CO 5.3, PM2.5 7.2 (bias +6.8). City level, Delhi today: CPCB 249, ours 250. Compared on station-hours, not "20 past station-days": the CPCB API has no history, so past days build up as we collect. |
+| Completeness and gap flags for Delhi's recent days | Pass: 7 days of summaries; completeness 96–98% on full days, 1–5 stations silent 3+ h per day, no gap-bias flag this week (max +3.4 pp) |
+| Shadow AQI validation reports an MAE | Pass: PM2.5 hold-out MAE 22–43 µg/m³ per day in Delhi (n = about 1,000 per day) |
+
+Tests: backend 86 passed, jobs 57 passed; ruff and ESLint clean.
+
+**What the CPCB comparison revealed (all fixed and documented in code)**
+1. OpenAQ labels CPCB-network gases "ppb", but the values are µg/m³ (mg/m³ for CO). NO₂ was
+   1.92× and SO₂ 2.63× too high (= MW/24.45). Fixed in the collector; migration 0004
+   corrected stored rows.
+2. CPCB's `last_update` is the end of the averaging hour, so the reading belongs to the hour
+   before. Fixed; migration 0004 shifted stored CPCB rows.
+3. CO/O₃: CPCB's running index uses the last 8 h, not the day's max 8 h.
+4. CPCB's 24-h index averages the hourly sub-indices. PM2.5 error fell from 26.7 to 7.2 points.
+   This method is now the default so that official vs shadow differences come from missing
+   data, not from method (the textbook method stays available as `concentration_mean`).
+
+**Known issues**
+- PM2.5 is still about +7 points above CPCB; cause unknown (sensor choice or QA differences).
+- Shadow AQI uses one CAMS value per district, so the model-difference term is 0 inside a
+  city. Per-station CAMS cells would sharpen it (about 4 extra Open-Meteo calls per hour).
+- The shadow ± band is narrow (±1–5) because only filled hours (2–3% in Delhi) carry the
+  error; a Diwali-style night with many silent stations will widen it.
+- Today's summary leaves out the newest 2 hours (OpenAQ publishing lag); the official figure
+  uses the live CPCB feed.
+- Only Delhi has OpenAQ history so far; the other cities show the official figure only until
+  the backfill reaches them (about 2 more hourly runs). Shimla has no station at all.
+- The Severe band's upper concentration limits are provisional (see `aqi_breakpoints.py`).
+
+**Next:** Phase 3, Backend API.

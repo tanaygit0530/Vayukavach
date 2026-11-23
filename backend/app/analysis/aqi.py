@@ -67,12 +67,16 @@ class AqiResult:
 
 
 def aqi_from_concentrations(averages: Mapping[str, float | None]) -> AqiResult:
-    """AQI from already-averaged concentrations (24 h, or 8 h max for CO/O3).
+    """AQI from already-averaged concentrations (24 h, or 8 h for CO/O3)."""
+    return aqi_from_sub_indices(
+        {p: sub_index(p, c) for p, c in averages.items() if p in CONCENTRATION_BANDS}
+    )
 
-    Follows CPCB's validity rule: at least 3 pollutants, one of them PM2.5 or PM10.
-    """
-    subs = {p: sub_index(p, c) for p, c in averages.items() if p in CONCENTRATION_BANDS}
-    subs = {p: s for p, s in subs.items() if s is not None}
+
+def aqi_from_sub_indices(sub_indices: Mapping[str, float | None]) -> AqiResult:
+    """AQI = highest sub-index. Follows CPCB's validity rule: at least 3 pollutants, one of
+    them PM2.5 or PM10 (an AQI is still returned when invalid, with the reason)."""
+    subs = {p: s for p, s in sub_indices.items() if s is not None}
     if not subs:
         return AqiResult(None, None, {}, False, "no pollutant data")
     main = max(subs, key=lambda p: (subs[p], p))
@@ -117,9 +121,43 @@ def window_average(
     return float(window.mean())
 
 
+# How the 24-h sub-index is formed.
+CPCB_FEED = "cpcb_feed"  # mean of the hourly sub-indices (what CPCB publishes)
+CONCENTRATION_MEAN = "concentration_mean"  # sub-index of the 24-h mean concentration
+
+# Evidence (docs/validation/aqi_vs_cpcb.md, 2026-11-23, 40 Delhi station-hours): against
+# CPCB's published PM2.5 sub-indices, "sub-index of the mean" was off by MAE 26.7 points
+# (bias +25.7); "mean of hourly sub-indices" by MAE 7.2. The PM2.5 scale bends at 120 ug/m3
+# (3.4 -> 0.77 points per ug/m3), so the two methods differ most on polluted days. We follow
+# CPCB so that official vs shadow differences come from missing data, not from method.
+DEFAULT_METHOD = CPCB_FEED
+
+
+def window_sub_index(
+    hourly: pd.Series,
+    pollutant: str,
+    end: datetime,
+    mode: str = RUNNING,
+    method: str = DEFAULT_METHOD,
+) -> float | None:
+    """Sub-index for the window ending at `end` (same validity rules as window_average)."""
+    if pollutant in EIGHT_HOUR or method == CONCENTRATION_MEAN:
+        return sub_index(pollutant, window_average(hourly, pollutant, end, mode=mode))
+    start = end - timedelta(hours=24)
+    window = hourly[(hourly.index >= start) & (hourly.index < end)].astype(float)
+    window = window[window >= 0].dropna()
+    if window.count() < MIN_HOURS_24H:
+        return None
+    return float(sum(sub_index(pollutant, v) for v in window) / len(window))
+
+
 def station_aqi(
-    hourly_by_pollutant: Mapping[str, pd.Series], end: datetime, mode: str = RUNNING
+    hourly_by_pollutant: Mapping[str, pd.Series],
+    end: datetime,
+    mode: str = RUNNING,
+    method: str = DEFAULT_METHOD,
 ) -> AqiResult:
     """AQI for one station for the 24 h before `end`."""
-    averages = {p: window_average(s, p, end, mode=mode) for p, s in hourly_by_pollutant.items()}
-    return aqi_from_concentrations(averages)
+    return aqi_from_sub_indices(
+        {p: window_sub_index(s, p, end, mode, method) for p, s in hourly_by_pollutant.items()}
+    )
