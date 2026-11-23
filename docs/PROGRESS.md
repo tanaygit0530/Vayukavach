@@ -16,7 +16,7 @@
 | `docker compose up` starts Postgres | Pass (container healthy, Alembic connects) |
 | Backend `/health` returns OK | Pass (`{"status":"ok","database":"ok"}`) |
 | Frontend loads | Pass (http://localhost:5180) |
-| CI passes | Not verified on GitHub (no remote yet); every CI command passes locally |
+| CI passes | Pass (GitHub Actions run 45164431436, all three jobs green) |
 
 Tests: backend 1 passed, jobs 2 passed; ruff, ESLint and `vite build` clean.
 
