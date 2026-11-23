@@ -98,6 +98,8 @@ from GitHub's runners (`Connection refused`, checked twice on 2026-11-23). Insta
 `./jobs/scripts/install_cpcb_launchd.sh`: a launchd job at :05 every hour, running from a clone
 in `~/.vayukavach` (macOS blocks background jobs from reading `~/Desktop`), log in
 `~/Library/Logs/vayukavach-cpcb.log`. Hours when the Mac is asleep are stored as missing.
+After CPCB, the same job triggers the GitHub `cloud` collection with `gh workflow run`, because
+GitHub's own hourly schedule did not fire reliably for this repository.
 
 **Scheduled runs:** `.github/workflows/collect-hourly.yml` runs at minute 10 of every hour.
 Add the repository secrets `DATABASE_URL` (Supabase), `DATA_GOV_IN_API_KEY` and `OPENAQ_API_KEY`;
