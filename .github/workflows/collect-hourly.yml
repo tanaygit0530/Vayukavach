@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Job to run (hourly, cpcb, openaq, openmeteo-air, weather)"
-        default: hourly
+        description: "Job to run (cloud, openaq, openmeteo-air, weather, summarize). CPCB runs on a machine in India: data.gov.in refuses GitHub runners."
+        default: cloud
 
 concurrency:
   group: collect-hourly
@@ -47,4 +47,4 @@ jobs:
       - name: Run collectors
         if: steps.config.outputs.ready == 'true'
         working-directory: jobs
-        run: uv sync --locked && uv run python run.py "${{ inputs.job || 'hourly' }}"
+        run: uv sync --locked && uv run python run.py "${{ inputs.job || 'cloud' }}"

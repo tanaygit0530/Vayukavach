@@ -8,6 +8,7 @@ Jobs:
   summarize      completeness, gap flags, measured/shadow/official AQI for the last
                  SUMMARY_DAYS IST days (default 2) -> daily_city_summary
   hourly         all of the above, each logged separately in fetch_log
+  cloud          all except cpcb (for GitHub-hosted runners)
 
 Exit code is 1 if any collector failed, so GitHub Actions marks the run red.
 """
@@ -55,7 +56,12 @@ COLLECTORS: dict[str, Collector] = {
     "weather": openmeteo.run_weather,
     "summarize": summarize,
 }
-GROUPS = {"hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize"]}
+GROUPS = {
+    "hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize"],
+    # GitHub-hosted runners: data.gov.in refuses connections from them (checked 2026-11-23),
+    # so CPCB runs from a machine in India (jobs/scripts/install_cpcb_launchd.sh).
+    "cloud": ["openmeteo-air", "weather", "openaq", "summarize"],
+}
 JOBS = sorted([*COLLECTORS, *GROUPS])
 
 
