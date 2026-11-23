@@ -2,7 +2,8 @@ name: Collect hourly
 
 on:
   schedule:
-    - cron: "10 * * * *" # minute 10 of every hour (UTC)
+    # Off the busy top of the hour (GitHub delays or drops scheduled runs under load).
+    - cron: "23 * * * *" # minute 23 UTC = :53 IST
   workflow_dispatch:
     inputs:
       job:

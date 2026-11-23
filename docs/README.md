@@ -92,7 +92,7 @@ Production therefore defaults to `OPENAQ_BACKFILL_DAYS=30` and `OPENAQ_REFERENCE
 **Security:** every table has row level security enabled with no policies (migration 0005),
 so Supabase's public REST API cannot read or write them; the backend connects as the owner.
 
-**Where each collector runs:** GitHub Actions runs the `cloud` group (Open-Meteo, OpenAQ,
+**Where each collector runs:** GitHub Actions runs the `cloud` group at :23 UTC (Open-Meteo, OpenAQ,
 summaries) every hour. **CPCB runs on a Mac in India**, because data.gov.in refuses connections
 from GitHub's runners (`Connection refused`, checked twice on 2026-11-23). Install it with
 `./jobs/scripts/install_cpcb_launchd.sh`: a launchd job at :05 every hour, running from a clone
