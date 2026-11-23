@@ -190,3 +190,13 @@ def test_one_broken_sensor_does_not_fail_the_run(session, districts, api_keys, f
     openaq.run(session, mock_http(handler, attempts=2), delhi, stats)
     co = session.execute(select(Reading).where(Reading.pollutant == "co")).scalars().all()
     assert stats.errors == 1 and len(co) == 12  # the other sensor still stored
+
+
+def test_backfill_days_and_reference_only_are_configurable(monkeypatch):
+    monkeypatch.setenv("OPENAQ_BACKFILL_DAYS", "30")
+    monkeypatch.setenv("OPENAQ_REFERENCE_ONLY", "1")
+    assert openaq.backfill_days() == 30
+    district = DistrictRow(1, "delhi", "Delhi", 28.6139, 77.209)
+    payload = load("openaq_recorded_locations_delhi.json")
+    locs = openaq.find_locations(mock_http(lambda r: httpx.Response(200, json=payload)), district)
+    assert locs and all(loc["isMonitor"] for loc in locs)

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
@@ -33,7 +34,7 @@ from collectors.common import (
 from collectors.districts import DistrictRow
 
 BASE = "https://api.openaq.org/v3"
-BACKFILL_DAYS = 90
+BACKFILL_DAYS = 90  # override with OPENAQ_BACKFILL_DAYS (storage: ~250 bytes per reading)
 RADIUS_KM = 25.0
 BOX_DEG = 0.25
 PAGE_LIMIT = 1000
@@ -48,6 +49,15 @@ PARAMETERS = {"pm25": "pm25", "pm10": "pm10", "no2": "no2", "so2": "so2", "co": 
 
 def _parse_utc(raw: str) -> datetime:
     return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+
+
+def backfill_days() -> int:
+    return int(os.environ.get("OPENAQ_BACKFILL_DAYS", BACKFILL_DAYS))
+
+
+def reference_only() -> bool:
+    """OPENAQ_REFERENCE_ONLY=1 skips low-cost sensors (saves storage and requests)."""
+    return os.environ.get("OPENAQ_REFERENCE_ONLY", "0").lower() in {"1", "true", "yes"}
 
 
 def find_locations(http: HttpClient, district: DistrictRow) -> list[dict]:
@@ -68,6 +78,8 @@ def find_locations(http: HttpClient, district: DistrictRow) -> list[dict]:
         if lat is None or lon is None:
             continue
         if (loc.get("country") or {}).get("code") not in (None, "IN"):
+            continue
+        if reference_only() and not loc.get("isMonitor"):
             continue
         if haversine_km(lat, lon, district.lat, district.lon) <= RADIUS_KM:
             out.append(loc)
@@ -285,7 +297,7 @@ def run(session: Session, http: HttpClient, districts: list[DistrictRow], stats:
                     if last_ok:
                         start = last_ok + timedelta(hours=1)
                     else:
-                        start = end - timedelta(days=BACKFILL_DAYS)
+                        start = end - timedelta(days=backfill_days())
                     if sensor.datetime_first:
                         start = max(start, floor_hour(sensor.datetime_first))
                     if start >= end:

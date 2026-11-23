@@ -21,6 +21,9 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
       OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+      # Supabase free tier is 500 MB; see docs/README.md "Storage".
+      OPENAQ_BACKFILL_DAYS: ${{ vars.OPENAQ_BACKFILL_DAYS || '30' }}
+      OPENAQ_REFERENCE_ONLY: ${{ vars.OPENAQ_REFERENCE_ONLY || '1' }}
     steps:
       - name: Check configuration
         id: config

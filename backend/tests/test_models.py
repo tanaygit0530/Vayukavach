@@ -71,3 +71,17 @@ def test_migration_downgrades_and_upgrades(db_url, db_engine):
     assert "readings" not in inspect(db_engine).get_table_names()
     migrate(db_url)
     assert "readings" in inspect(db_engine).get_table_names()
+
+
+def test_every_table_has_row_level_security(db_engine):
+    rows = (
+        db_engine.connect()
+        .execute(
+            text(
+                "SELECT relname FROM pg_class WHERE relnamespace = 'public'::regnamespace"
+                " AND relkind = 'r' AND NOT relrowsecurity"
+            )
+        )
+        .all()
+    )
+    assert rows == [], f"tables without RLS (add them to a migration): {rows}"

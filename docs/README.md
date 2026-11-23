@@ -84,6 +84,14 @@ providers are converted from ppb/ppm normally.
 | `summary.py` | Writes `daily_city_summary` (official vs measured vs shadow AQI) and `station_day_completeness`; run by `run.py summarize` |
 | `validate_cpcb.py` | Compares our sub-indices with CPCB's published ones: `uv run python -m app.analysis.validate_cpcb docs/validation/aqi_vs_cpcb.md` |
 
+**Storage:** a stored reading takes ~250 bytes with indexes. 90 days of 54 Delhi monitors
+used 146 MB, and all 10 cities with low-cost sensors would pass Supabase's 500 MB free tier.
+Production therefore defaults to `OPENAQ_BACKFILL_DAYS=30` and `OPENAQ_REFERENCE_ONLY=1`
+(GitHub repository variables can override both).
+
+**Security:** every table has row level security enabled with no policies (migration 0005),
+so Supabase's public REST API cannot read or write them; the backend connects as the owner.
+
 **Scheduled runs:** `.github/workflows/collect-hourly.yml` runs at minute 10 of every hour.
 Add the repository secrets `DATABASE_URL` (Supabase), `DATA_GOV_IN_API_KEY` and `OPENAQ_API_KEY`;
 until `DATABASE_URL` is set the workflow skips itself.
