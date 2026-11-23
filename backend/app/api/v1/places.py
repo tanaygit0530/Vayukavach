@@ -3,6 +3,7 @@ from datetime import datetime
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.common import (
@@ -20,9 +21,35 @@ from app.api.common import (
     meta,
     to_ist,
 )
+from app.models import District
 from app.services import places
 
 router = APIRouter(prefix="/places", tags=["places"])
+
+
+class DistrictOut(BaseModel):
+    id: str
+    name: str
+    state: str
+    lat: float
+    lon: float
+
+
+class DistrictList(Meta):
+    districts: list[DistrictOut]
+
+
+@router.get("/districts", response_model=DistrictList)
+def districts(session: Session = Depends(get_session), now: datetime = Depends(get_now)):
+    """Districts VayuKavach covers (the list grows as the district file grows)."""
+    rows = session.execute(select(District).order_by(District.id)).scalars().all()
+    return {
+        "districts": [
+            {"id": d.slug, "name": d.name, "state": d.state, "lat": d.lat, "lon": d.lon}
+            for d in rows
+        ],
+        **meta("VayuKavach district list", now, None, now),
+    }
 
 
 class Place(BaseModel):

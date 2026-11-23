@@ -3,14 +3,84 @@
 @tailwind utilities;
 
 :root {
+  /* text */
   --text: #17212b;
   --text-muted: #5e6b77;
+  /* surfaces */
   --page-bg: #e9eef2;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --bubble-bg: rgba(255, 255, 255, 0.78);
+  /* accent */
+  --accent: #1f9d55;
+  --stale: #b45309; /* amber, 4.5:1 on white */
+  /* India AQI (CPCB categories) */
+  --aqi-good: #3bb44a;
+  --aqi-satisfactory: #a5d63f;
+  --aqi-moderate: #f5d547;
+  --aqi-poor: #f08a3c;
+  --aqi-verypoor: #e5483f;
+  --aqi-severe: #9e1b32;
+  /* heat levels (centre -> edge), switched by the Heat tab */
+  --heat-bg-centre: #38bdf8;
+  --heat-bg-edge: #1e3a8a;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
   font-family: 'Outfit', system-ui, sans-serif;
+  font-weight: 400;
   color: var(--text);
   background: var(--page-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-card shadow-card;
+    background: var(--card-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .glass-bubble {
+    @apply rounded-bubble shadow-bubble;
+    background: var(--bubble-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+  /* soft sky with faint clouds (Temperature tab) */
+  .sky-bg {
+    background:
+      radial-gradient(ellipse 30% 18% at 22% 18%, rgba(255, 255, 255, 0.75), transparent 70%),
+      radial-gradient(ellipse 26% 14% at 70% 12%, rgba(255, 255, 255, 0.6), transparent 70%),
+      radial-gradient(ellipse 34% 20% at 85% 60%, rgba(255, 255, 255, 0.5), transparent 70%),
+      radial-gradient(ellipse 28% 16% at 35% 75%, rgba(255, 255, 255, 0.45), transparent 70%),
+      linear-gradient(180deg, #d3d9df 0%, #e4e8ec 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  /* Heat tab: radial gradient driven by the level (Phase 7 sets the variables) */
+  .heat-bg {
+    background: radial-gradient(ellipse at 50% 40%, var(--heat-bg-centre), var(--heat-bg-edge));
+    transition: background 600ms ease;
+  }
 }

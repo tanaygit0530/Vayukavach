@@ -10,6 +10,12 @@ def test_places_search_marks_covered_districts(client):
     assert client.get("/api/v1/places/search", params={"q": "x"}).status_code == 422
 
 
+def test_districts_list(client):
+    body = client.get("/api/v1/places/districts").json()
+    assert_meta(body)
+    assert {d["id"] for d in body["districts"]} == {"delhi", "shimla"}
+
+
 def test_places_summary(client):
     body = client.get("/api/v1/places/summary", params={"ids": "delhi,shimla,nowhere"}).json()
     assert_meta(body, "mixed")
@@ -87,7 +93,7 @@ def test_gap_report_json_and_csv(client, db_engine):
 
 def test_openapi_lists_every_endpoint(client):
     paths = client.get("/openapi.json").json()["paths"]
-    assert len([p for p in paths if p.startswith("/api/v1")]) == 18
+    assert len([p for p in paths if p.startswith("/api/v1")]) == 19
 
 
 def test_rate_limit_returns_429():
