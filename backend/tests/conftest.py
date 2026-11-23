@@ -29,4 +29,3 @@ def db_engine(db_url):
 def conn(db_engine):
     with db_engine.begin() as connection:
         yield connection
-
