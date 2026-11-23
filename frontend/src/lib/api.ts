@@ -247,3 +247,43 @@ export interface HeatSummary extends Meta {
   level: string | null
   level_name: string | null
 }
+
+export interface HeatHourOut {
+  hour: string
+  local_hour: number
+  temperature: number | null
+  feels_like: number | null
+  heat_index: number | null
+  wet_bulb: number | null
+  level: string | null
+}
+
+export interface HeatDayOut {
+  date: string
+  temperature_min: number
+  temperature_max: number
+  heat_index_max: number
+  wet_bulb_max: number
+  level: string | null
+  is_forecast: boolean
+}
+
+export interface HeatReport extends Meta {
+  district: string
+  hour: string | null
+  temperature: number | null
+  humidity: number | null
+  feels_like: number | null
+  heat_index: number | null
+  wet_bulb: number | null
+  level: string | null
+  level_name: string | null
+  instruction: string | null
+  worst_level_today: string | null
+  safe_work_windows: { from_hour: number; to_hour: number }[]
+  hourly: HeatHourOut[]
+  daily: HeatDayOut[]
+  tips: string[]
+  tips_source: string
+  thresholds_status: string
+}

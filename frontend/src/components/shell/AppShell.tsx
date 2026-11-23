@@ -42,7 +42,7 @@ export function AppShell() {
           <main id="main" className="flex-1">
             <Outlet context={{ place } satisfies ShellContext} />
           </main>
-          <footer className="pb-1 text-[11px] text-ink-muted">
+          <footer className={clsx('pb-1 text-[11px]', pathname === '/heat' ? 'text-white/85' : 'text-ink-muted')}>
             Data: CPCB via data.gov.in · OpenAQ · Open-Meteo and CAMS (CC BY 4.0) · Map ©
             OpenStreetMap contributors
           </footer>

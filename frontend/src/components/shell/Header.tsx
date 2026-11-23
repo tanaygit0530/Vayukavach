@@ -38,9 +38,9 @@ export const Header = forwardRef<HTMLButtonElement, HeaderProps>(function Header
 ) {
   const now = useClock()
   const weather = useWeatherNow(place)
-  // The Temperature tab shows the temperature in its own card: each number once per screen.
+  // Temperature and Heat show the air temperature in their own cards: each number once per screen.
   const { pathname } = useLocation()
-  const temp = pathname === '/temperature' ? null : weather.data?.temperature
+  const temp = pathname === '/temperature' || pathname === '/heat' ? null : weather.data?.temperature
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <LocationButton ref={ref} place={place} open={drawerOpen} onClick={onOpenPlaces} />

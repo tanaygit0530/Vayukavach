@@ -110,3 +110,27 @@ def test_rate_limit_returns_429():
     c = TestClient(mini)
     codes = [c.get("/x").status_code for _ in range(5)]
     assert codes[:3] == [200, 200, 200] and codes[-1] == 429
+
+
+def test_safe_work_windows_match_the_hourly_levels(client):
+    body = client.get("/api/v1/heat/delhi").json()
+    normal = {h["local_hour"] for h in body["hourly"] if h["level"] == "normal"}
+    expected, start = [], None
+    for clock in range(6, 19):  # work day 6 AM to 7 PM
+        if clock in normal and start is None:
+            start = clock
+        if clock not in normal and start is not None:
+            expected.append({"from_hour": start, "to_hour": clock})
+            start = None
+    if start is not None:
+        expected.append({"from_hour": start, "to_hour": 19})
+    assert body["safe_work_windows"] == expected
+    levels = {h["level"] for h in body["hourly"]}
+    assert levels <= {"normal", "caution", "danger", "extreme"}
+
+
+def test_heat_levels_follow_the_hottest_hours(client):
+    body = client.get("/api/v1/heat/delhi").json()
+    hottest = max(body["hourly"], key=lambda h: h["heat_index"])
+    order = ["normal", "caution", "danger", "extreme"]
+    assert order.index(body["worst_level_today"]) >= order.index(hottest["level"])

@@ -72,7 +72,7 @@ mindmap
 | **Air Trust** | Official AQI **next to** a shadow AQI that fills missing hours, the share of readings that actually arrived, and a flag when gaps cluster in the most polluted hours | ✅ |
 | **Air tab** | Pollution map, station pins (measured / estimated / silent), hourly · 10-day · monthly AQI, pollutants, wind, CPCB health advice | ✅ |
 | **Temperature tab** | Feels-like with a reason, 7 AM–7 PM trend, 10-day forecast, sun arc, UV gauge, CSV export | ✅ |
-| **Heat Shield** | Heat index + wet-bulb, Normal → Extreme levels, safe work windows, NDMA tips | 🟡 API ready, UI next |
+| **Heat Shield** | Heat index + wet-bulb, Normal → Extreme colour-by-danger page, safe work windows, NDMA tips | ✅ |
 | **Finder** | Cleaner or cooler places with routes and precautions | ⏳ |
 | **Ask VayuKavach** | A chatbot that answers only from VayuKavach's data, with sources | ⏳ |
 | **Alerts** | Telegram messages in Hindi, Marathi and English | ⏳ |
@@ -89,6 +89,12 @@ mindmap
 <tr>
 <td><sub><b>Temperature tab</b> (Mumbai): moon after sunset, "Now" bubble, 10-day ranges on one scale, UV and condition cards.</sub></td>
 <td><sub><b>Phone</b>: the icon rail becomes a bottom bar; bubbles move under the map.</sub></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/heat-danger.jpg" alt="Heat tab at Danger level" /></td>
+</tr>
+<tr>
+<td colspan="2"><sub><b>Heat tab</b>: the whole page turns red at Danger. Big dot-matrix feels-like, the work-rest instruction, and a day arc where solid = safe hours and dotted = take care. (Danger shown with a test response; November data is Normal.)</sub></td>
 </tr>
 <tr>
 <td><img src="docs/screenshots/aqi-chart.jpg" alt="Hourly AQI chart with shadow estimates where official readings were missing" /></td>
@@ -254,7 +260,7 @@ flowchart LR
 | Analysis | pandas, NumPy: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
 | API | FastAPI, Pydantic models, TTL cache, per-IP rate limit, OpenAPI docs |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
-| Quality | pytest (199 tests), Vitest (22) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
+| Quality | pytest (201 tests), Vitest (32) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
 
 ---
 
@@ -305,9 +311,9 @@ gantt
   4 Shell and design system      :done, 2026-11-23, 1d
   5 Air tab                      :done, 2026-11-23, 1d
   6 Temperature tab              :done, 2026-11-23, 1d
-  7 Heat tab                     :active, 2026-11-24, 1d
+  7 Heat tab                     :done, 2026-11-23, 1d
   section Features
-  8 AQI forecasts days 6-10      :2026-11-25, 2d
+  8 AQI forecasts days 6-10      :active, 2026-11-24, 2d
   9 Pollution sources            :2026-11-27, 1d
   10 Clean air and cool finder   :2026-11-28, 2d
   11 Ask VayuKavach chatbot      :2026-11-30, 2d

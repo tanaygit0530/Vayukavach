@@ -21,10 +21,16 @@
   --aqi-verypoor: #e5483f;
   --aqi-severe: #9e1b32;
   /* heat levels (centre -> edge), switched by the Heat tab */
-  --heat-bg-centre: #38bdf8;
+  --heat-bg-centre: #0369a1;
   --heat-bg-edge: #1e3a8a;
+  --heat-bg-glow: #38bdf8;
   color-scheme: light;
 }
+
+/* Registered so the Heat background can animate smoothly between levels. */
+@property --heat-bg-centre { syntax: '<color>'; inherits: true; initial-value: #0369a1; }
+@property --heat-bg-edge { syntax: '<color>'; inherits: true; initial-value: #1e3a8a; }
+@property --heat-bg-glow { syntax: '<color>'; inherits: true; initial-value: #38bdf8; }
 
 html,
 body,
@@ -80,8 +86,23 @@ body {
 @layer components {
   /* Heat tab: radial gradient driven by the level (Phase 7 sets the variables) */
   .heat-bg {
-    background: radial-gradient(ellipse at 50% 40%, var(--heat-bg-centre), var(--heat-bg-edge));
-    transition: background 600ms ease;
+    background: radial-gradient(
+      ellipse 85% 75% at 50% 30%,
+      var(--heat-bg-centre) 0%,
+      var(--heat-bg-edge) 62%,
+      var(--heat-bg-glow) 100%
+    );
+    transition:
+      --heat-bg-centre 700ms ease,
+      --heat-bg-edge 700ms ease,
+      --heat-bg-glow 700ms ease;
+  }
+  .heat-card {
+    @apply rounded-card text-white;
+    background: rgba(0, 0, 0, 0.38); /* contrast-tested: white text >= 4.5:1 on every level */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 }
 

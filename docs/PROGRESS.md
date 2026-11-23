@@ -308,4 +308,37 @@ Tests: frontend 22, backend 140, jobs 59.
   rather than putting dashed borders on every card.
 - "Feels like" can equal the air temperature (different measures, so both are shown).
 
-**Next:** Phase 7, Heat tab.
+
+## Phase 7: Heat tab — complete (2026-11-23)
+
+**Built**
+- Backend (from Phase 3, now with consistency tests): NWS heat index, Stull wet-bulb, levels
+  (draft thresholds in `analysis/heat.py`), safe windows 6 AM–7 PM, NDMA tips.
+- `pages/HeatPage.tsx` + `components/heat/HeatParts.tsx`: full-page radial gradient by
+  level, animated with registered CSS properties (respects reduced motion); big feels-like in
+  DotGothic16; level, district and work-rest instruction; Safe work hours day arc (solid = safe,
+  dotted in the level colour = take care, dot = now); hour-by-hour strip (rest of today);
+  10-day heat forecast (today + 9) with level pills and range bars; Heat stress (air
+  temperature, heat index, wet-bulb, humidity); UV; What to do today (NDMA tips + "Find cooler
+  places"). The header hides its temperature on this tab.
+- Contrast: the spec's light centres give white text 2.1:1 (#38BDF8) and 1.4:1 (#FCD34D), so
+  centres are darkened (5.0–8.3:1) with the light colour kept as an outer glow; cards are 38%
+  black glass. A unit test enforces >= 4.5:1 for every level, centre, edge and glow (it caught
+  the Caution glow at 3.7:1, now fixed).
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| Heat calculations pass their tests | Pass: formula tests (NWS table, hand-worked regression, psychrometric reference) + API tests |
+| Page colour changes with the level | Pass: Vitest (Normal / Danger / Extreme set the CSS variables) + Chromium screenshots of all four levels (non-Normal via a mocked API response) |
+| Safe work hours match hourly data | Pass: API test rebuilds the windows from the hourly levels; live Chennai shows Caution 10 AM–2 PM and windows 6–10 AM, 2–7 PM |
+
+Tests: frontend 32, backend 142, jobs 59. All 10 cities load with no console errors.
+
+**Known issues**
+- In November every city is Normal or Caution, so Danger/Extreme are verified with mocked
+  responses; real summer data will exercise them.
+- Level thresholds are a draft pending the district heat action plans.
+- "Send alert to my team" waits for the Telegram bot (Phase 12).
+
+**Next:** Phase 8, AQI forecasts (bias correction and 10-day outlook).

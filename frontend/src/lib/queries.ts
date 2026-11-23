@@ -8,6 +8,7 @@ import {
   type AirMonth,
   type AirNow,
   type Co2,
+  type HeatReport,
   type HeatSummary,
   type SunDay,
   type Uv,
@@ -169,6 +170,15 @@ export function useHeatSummary(place: string) {
   return useQuery({
     queryKey: ['heat', place],
     queryFn: () => apiGet<HeatSummary>(`/heat/${place}`),
+    staleTime: 10 * MINUTE,
+  })
+}
+
+/** Same request as useHeatSummary (shared cache), typed as the full report. */
+export function useHeat(place: string) {
+  return useQuery({
+    queryKey: ['heat', place],
+    queryFn: () => apiGet<HeatReport>(`/heat/${place}`),
     staleTime: 10 * MINUTE,
   })
 }
