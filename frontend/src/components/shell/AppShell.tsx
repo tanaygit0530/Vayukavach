@@ -16,6 +16,9 @@ const BACKGROUNDS: Record<string, string> = {
   '/temperature': 'clouds-bg',
   '/ask': 'clouds-bg',
   '/alerts': 'clouds-bg',
+  '/reports': 'clouds-bg',
+  '/profile': 'clouds-bg',
+  '/finder': 'clouds-bg',
   '/heat': 'heat-bg',
 }
 
