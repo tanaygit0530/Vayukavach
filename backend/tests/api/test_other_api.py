@@ -95,7 +95,7 @@ def test_gap_report_json_and_csv(client, db_engine):
 
 def test_openapi_lists_every_endpoint(client):
     paths = client.get("/openapi.json").json()["paths"]
-    assert len([p for p in paths if p.startswith("/api/v1")]) == 22
+    assert len([p for p in paths if p.startswith("/api/v1")]) == 23
 
 
 def test_rate_limit_returns_429():

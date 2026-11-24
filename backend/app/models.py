@@ -433,3 +433,19 @@ class SourceShare(Base):
     is_daily: Mapped[bool] = mapped_column(Boolean, default=False)
     note: Mapped[str | None] = mapped_column(Text)
     loaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ChatLog(Base):
+    """Questions asked to Ask VayuKavach, for review. No personal data: contact details and
+    long digit runs are removed before storing; no IP or user id is kept."""
+
+    __tablename__ = "chat_log"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    question: Mapped[str] = mapped_column(String(500))
+    language: Mapped[str] = mapped_column(String(4))
+    refused: Mapped[bool] = mapped_column(Boolean)
+    engine: Mapped[str] = mapped_column(String(16))
+    tools: Mapped[list] = mapped_column(JSON)
+    had_sources: Mapped[bool] = mapped_column(Boolean)

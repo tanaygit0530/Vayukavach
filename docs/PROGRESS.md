@@ -474,4 +474,43 @@ Tests: backend 167, jobs 60, frontend 37.
 - Air candidates are CPCB stations only (OpenAQ low-cost sensors are not used for suggestions).
 - Park- and lake-level cooling (satellite land-surface temperature) is future scope.
 
-**Next:** Phase 11, Ask VayuKavach chatbot.
+**Next:** Phase 11, Ask VayuKavach chatbot (done below).
+
+## Phase 11: Ask VayuKavach chatbot — complete (2026-11-24)
+
+**Built**
+- `POST /api/v1/chat` (`app/chat/`): message ≤ 500 chars, selected place, optional language
+  (otherwise detected: English, Hindi, Marathi). Limit 10 questions per minute per client.
+- Scope check first (`scope.py`): off-topic questions get a polite refusal and never reach a model.
+- Engines in order: Gemini (`gemini-2.5-flash`, function calling, key sent in a header) → Ollama
+  (`OLLAMA_MODEL`, e.g. Gemma) → a rules engine with templates in all three languages. If an
+  engine fails or is rate-limited, the next one answers.
+- Tools the model may call: `get_aqi`, `get_completeness`, `get_shadow_aqi`, `get_forecast`
+  (entries labelled today / tomorrow / in N days; always includes tomorrow), `get_heat_risk`,
+  `find_places`, `get_precautions`. They reuse the same services as the Air and Heat tabs.
+- Safety: sources come from tool results, never from model text; an answer with numbers but no
+  tool source is replaced by "no data"; no diagnosis (108 for heatstroke signs); neutral wording
+  on politics; tool text is treated as data.
+- `chat_log` table (migration 0009, RLS on): question with emails and long numbers removed,
+  language, engine, tools used, refused or not.
+- Frontend `/ask`: chat bubbles, source chips (source · time · Measured/Estimated; dashed for
+  estimated), refusals and errors in an amber bubble, suggested questions per language,
+  language selector, side card of what it can and won't answer.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| 50-question evaluation passes | Pass: `tests/chat_eval.yaml`, 50 cases (en/hi/mr, out-of-scope, medical, politics, uncovered cities, far-future dates) on the rules engine; engine tests cover the Gemini/Ollama tool loops, number guard and fallback |
+| Answers show sources matching the Air and Heat tabs | Pass (Chromium, live Supabase data + Gemini): Delhi forecast answer cites "VayuKavach AQI forecast (CAMS, corrected)" and CPCB advice; Mumbai Marathi heat answer cites the same Open-Meteo heat source and time as the Heat tab |
+
+Tests: backend 227, jobs 60, frontend 40.
+
+**Known issues**
+- Gemini free tier is rate-limited; when it returns 429 the rules engine answers (shorter, but
+  same data and sources).
+- Only `qwen2.5-coder:3b` is installed for Ollama locally; pull a Gemma model for a better
+  offline fallback.
+- Found during live checks: Gemini once asked the forecast for 1 day and called today
+  "tomorrow". Fixed by always returning today and tomorrow, with relative day labels.
+
+**Next:** Phase 12, alerts (Twilio WhatsApp/SMS, email), testing, deployment and demo.

@@ -1,8 +1,9 @@
 """Clean Air and Cool Places Finder (spec Module 4).
 
 Every suggestion rests on a real value; a place with no data is never returned.
-- Cleaner air: CPCB stations with a reading in the last 3 hours (Measured), plus a 3-day CAMS
-  outlook for the shortlisted places (Estimated). Ranked by 0.6 x current + 0.4 x outlook.
+- Cleaner air: CPCB stations with a recent reading (hour start within 4.5 h: feed lag + hourly
+  fetch; Measured), plus a 3-day CAMS outlook for the shortlisted places (Estimated). Ranked by
+  0.6 x current + 0.4 x outlook.
 - Cooler places: hill stations and towns with CPCB stations, ranked by the Open-Meteo 3-day mean
   of the daily "feels like" maximum (Estimated). Park-level cooling needs satellite land-surface
   temperature, which VayuKavach does not have yet, so "nearby" heat returns no places.
@@ -33,7 +34,8 @@ HILLS = Path(__file__).resolve().parents[1] / "data" / "hill_stations.csv"
 
 RADIUS = {"nearby": 10.0, "daytrip": 150.0, "vacation": None}
 MIN_DISTANCE = {"nearby": 0.0, "daytrip": 10.0, "vacation": 10.0}  # skip what "nearby" covers
-FRESH = timedelta(hours=3)
+# Measured from the hour's start: 1 h averaging + CPCB feed lag (~1-2 h) + hourly fetch.
+FRESH = timedelta(hours=4, minutes=30)
 TOP = 10
 SHORTLIST = 25  # places that get a forecast lookup (Open-Meteo counts each point)
 VACATION_TOWNS = 30

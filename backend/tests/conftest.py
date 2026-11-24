@@ -29,3 +29,13 @@ def db_engine(db_url):
 def conn(db_engine):
     with db_engine.begin() as connection:
         yield connection
+
+
+@pytest.fixture(autouse=True)
+def _no_live_services(monkeypatch):
+    """Tests never use the developer's real API keys or call live AI/routing services."""
+    for key in ("GEMINI_API_KEY", "OLLAMA_MODEL", "ORS_API_KEY", "TELEGRAM_BOT_TOKEN"):
+        monkeypatch.setenv(key, "")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()

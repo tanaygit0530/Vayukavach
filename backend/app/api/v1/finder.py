@@ -108,8 +108,8 @@ def find(
             source = f"{SRC_CPCB}; outlook: {SRC_CAMS}"
             label, empty = "mixed", None
             note = (
-                "Current AQI is measured at CPCB stations (last 3 hours); the 3-day outlook is a "
-                "CAMS model estimate. Ranked by 60% today + 40% outlook."
+                "Current AQI is measured at CPCB stations (latest published hour); the 3-day "
+                "outlook is a CAMS model estimate. Ranked by 60% today + 40% outlook."
             )
         else:
             data = cache.get_or_set(

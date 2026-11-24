@@ -75,7 +75,7 @@ mindmap
 | **Temperature tab** | Feels-like with a reason, 7 AM–7 PM trend, 10-day forecast, sun arc, UV gauge, CSV export | ✅ |
 | **Heat Shield** | Heat index + wet-bulb, Normal → Extreme colour-by-danger page, safe work windows, NDMA tips | ✅ |
 | **Finder** | Cleaner-air and cooler places nearby, for a day trip or a vacation, with routes, travel time and official precautions | ✅ |
-| **Ask VayuKavach** | A chatbot that answers only from VayuKavach's data, with sources | ⏳ |
+| **Ask VayuKavach** | A chatbot that answers only from VayuKavach's data, with sources | ✅ |
 | **Alerts** | Telegram messages in Hindi, Marathi and English | ⏳ |
 
 ---
@@ -347,8 +347,8 @@ gantt
   8 AQI forecasts days 1-10      :done, 2026-11-23, 1d
   9 Pollution sources            :done, 2026-11-24, 1d
   10 Clean air and cool finder   :done, 2026-11-24, 1d
-  11 Ask VayuKavach chatbot      :active, 2026-11-25, 2d
-  12 Alerts, tests, deploy       :2026-12-02, 2d
+  11 Ask VayuKavach chatbot      :done, 2026-11-24, 1d
+  12 Alerts, tests, deploy       :active, 2026-11-25, 2d
 ```
 
 Progress log with checks for every phase: [docs/PROGRESS.md](docs/PROGRESS.md)

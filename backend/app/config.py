@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     data_gov_in_api_key: str = ""
     openaq_api_key: str = ""
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = ""  # e.g. gemma3 or another tool-capable model; empty = disabled
     telegram_bot_token: str = ""
     ors_api_key: str = ""  # optional: OpenRouteService; without it routes use public OSRM
     frontend_origin: str = "http://localhost:5180"

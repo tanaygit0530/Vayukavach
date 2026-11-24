@@ -351,3 +351,36 @@ export interface RouteResult extends Meta {
   geometry: [number, number][]
   maps_url: string
 }
+
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}/api/v1${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    let detail = response.statusText
+    try {
+      detail = (await response.json()).detail ?? detail
+    } catch {
+      /* not JSON */
+    }
+    throw new ApiError(response.status, detail)
+  }
+  return response.json() as Promise<T>
+}
+
+export interface ChatSource {
+  source: string
+  time: string | null
+  label: 'measured' | 'estimated' | null
+  tool: string | null
+}
+
+export interface ChatReply {
+  answer: string
+  sources: ChatSource[]
+  refused: boolean
+  language: 'en' | 'hi' | 'mr'
+  engine: 'gemini' | 'ollama' | 'rules' | 'scope'
+}
