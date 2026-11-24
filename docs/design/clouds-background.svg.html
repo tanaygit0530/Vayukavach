@@ -2,7 +2,7 @@
 <svg width="1920" height="1200" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#bfc9d2"/><stop offset="1" stop-color="#dfe4e8"/>
+      <stop offset="0" stop-color="#9fb0c0"/><stop offset="1" stop-color="#c9d3dc"/>
     </linearGradient>
     <!-- where clouds may appear: heavier at the top-right and bottom-left, light in the middle -->
     <radialGradient id="m1" cx="0.8" cy="0.1" r="0.55"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
@@ -25,23 +25,23 @@
       <feTurbulence type="fractalNoise" baseFrequency="0.0011 0.0019" numOctaves="7" seed="23" result="noise"/>
       <!-- cloud cover from the noise: only the denser part becomes cloud -->
       <feColorMatrix in="noise" type="matrix" result="cover"
-        values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  3.6 0 0 0 -1.42"/>
+        values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  4.2 0 0 0 -1.68"/>
       <!-- light from above gives the puffs volume -->
-      <feGaussianBlur in="cover" stdDeviation="22" result="soft"/>
-      <feDiffuseLighting in="soft" surfaceScale="9" diffuseConstant="1.1" lighting-color="#ffffff" result="lit">
+      <feGaussianBlur in="cover" stdDeviation="14" result="soft"/>
+      <feDiffuseLighting in="soft" surfaceScale="12" diffuseConstant="1.15" lighting-color="#ffffff" result="lit">
         <feDistantLight azimuth="270" elevation="55"/>
       </feDiffuseLighting>
       <feComposite in="lit" in2="cover" operator="in" result="litClouds"/>
       <feComponentTransfer in="litClouds" result="tone">
-        <feFuncR type="linear" slope="0.22" intercept="0.80"/>
-        <feFuncG type="linear" slope="0.21" intercept="0.81"/>
-        <feFuncB type="linear" slope="0.19" intercept="0.83"/>
+        <feFuncR type="linear" slope="0.32" intercept="0.62"/>
+        <feFuncG type="linear" slope="0.31" intercept="0.64"/>
+        <feFuncB type="linear" slope="0.28" intercept="0.68"/>
       </feComponentTransfer>
-      <feGaussianBlur in="tone" stdDeviation="2.5"/>
+      <feGaussianBlur in="tone" stdDeviation="1.2"/>
     </filter>
   </defs>
   <rect width="1920" height="1200" fill="url(#sky)"/>
-  <g mask="url(#band-mask)">
+  <g>
     <rect width="1920" height="1200" filter="url(#clouds)"/>
   </g>
 </svg></body></html>
