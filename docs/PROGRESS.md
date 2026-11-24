@@ -467,7 +467,7 @@ Tests: backend 159, jobs 60, frontend 33.
 | Routes draw on the map | Pass: a route line in every mode (e.g. Delhi → Kotputli 167.8 km, 2 h 10 min) |
 | No unlabelled or data-less place appears | Pass: every listed place carries Measured/Estimated; API test drops a place whose forecast is empty |
 
-Tests: backend 168, jobs 60, frontend 37.
+Tests: backend 167, jobs 60, frontend 37.
 
 **Known issues**
 - Rough list travel times assume 60 km/h; the route card shows the real time.

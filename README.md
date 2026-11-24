@@ -291,7 +291,7 @@ flowchart LR
 | Analysis & ML | pandas, NumPy, LightGBM (quantile + bias-correction models), scikit-learn: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
 | API | FastAPI, Pydantic models, TTL cache, per-IP rate limit, OpenAPI docs |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
-| Quality | pytest (228 tests), Vitest (37) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
+| Quality | pytest (227 tests), Vitest (37) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
 
 ---
 
