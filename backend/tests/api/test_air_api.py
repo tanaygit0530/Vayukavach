@@ -1,3 +1,5 @@
+import pytest
+
 from tests.api.conftest import assert_meta
 
 
@@ -119,3 +121,39 @@ def test_air_daily_serves_stored_forecasts(client, db_engine):
     assert days[0]["method"] == "cams_corrected" and days[0]["median"] == 240
     assert days[7]["is_outlook"] and days[7]["method"] == "outlook" and days[7]["low"] == 207
     assert "bias-corrected" in body["note"] and "outlook model" in body["note"]
+
+
+def test_sources_study_daily_and_empty(client, db_engine):
+    from sqlalchemy import text
+
+    from app.analysis.time import ist_date
+    from tests.api.conftest import NOW
+
+    today = ist_date(NOW)
+    assert client.get("/api/v1/air/delhi/sources").json()["kind"] is None  # nothing loaded
+    with db_engine.begin() as conn:
+        ids = dict(conn.execute(text("SELECT slug, id FROM districts")).all())
+        for sector, pct in (("transport", 40.0), ("outside_city", 59.9)):
+            conn.execute(
+                text("INSERT INTO source_shares (district_id, date, sector, share_pct, source_name,"
+                     " source_year, is_daily, loaded_at) VALUES (:d, NULL, :s, :p, 'Study', 2018,"
+                     " false, now())"),
+                {"d": ids["shimla"], "s": sector, "p": pct},
+            )  # fmt: skip
+        for d_, pct in ((None, 30.0), (today, 25.0)):
+            for sector, value in (("transport", pct), ("stubble_fires", 100 - pct)):
+                conn.execute(
+                    text("INSERT INTO source_shares (district_id, date, sector, share_pct,"
+                         " source_name, is_daily, loaded_at) VALUES (:d, :day, :s, :p, :n, :daily,"
+                         " now())"),
+                    {"d": ids["delhi"], "day": d_, "s": sector, "p": value,
+                     "n": "IITM DSS" if d_ else "Study", "daily": d_ is not None},
+                )  # fmt: skip
+    shimla = client.get("/api/v1/air/shimla/sources").json()
+    assert shimla["kind"] == "study" and shimla["published_sum"] == 99.9
+    assert sum(s["share_pct"] for s in shimla["sectors"]) == pytest.approx(100.0)
+    assert shimla["sectors"][0]["label"] == "From outside the city"
+    delhi = client.get("/api/v1/air/delhi/sources").json()
+    assert delhi["kind"] == "daily" and delhi["date"] == str(today)  # daily wins over the study
+    assert {s["sector"]: s["share_pct"] for s in delhi["sectors"]}["transport"] == 25.0
+    assert client.get("/api/v1/air/delhi/sources").json()["source_name"] == "IITM DSS"

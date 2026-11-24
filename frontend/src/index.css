@@ -3,9 +3,13 @@
 @tailwind utilities;
 
 :root {
-  /* text */
+  /* text (hex for direct use; RGB channels so Tailwind opacity modifiers like bg-ink/20 work) */
   --text: #17212b;
   --text-muted: #5e6b77;
+  --text-rgb: 23 33 43;
+  --text-muted-rgb: 94 107 119;
+  --accent-rgb: 31 157 85;
+  --stale-rgb: 180 83 9;
   /* surfaces */
   --page-bg: #e9eef2;
   --card-bg: rgba(255, 255, 255, 0.9);

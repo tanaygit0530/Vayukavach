@@ -399,3 +399,37 @@ class ForecastModel(Base):
     metrics: Mapped[dict] = mapped_column(JSON)
     beats_baseline: Mapped[bool] = mapped_column(Boolean)
     notes: Mapped[str | None] = mapped_column(Text)
+
+
+SOURCE_SECTORS = (
+    "transport", "household_fuel", "industry", "power_plants", "dust", "road_dust",
+    "construction_demolition", "waste_burning", "diesel_gensets", "brick_kilns",
+    "stubble_fires", "sea_salt", "outside_city", "other",
+)  # fmt: skip
+
+
+class SourceShare(Base):
+    """Share of PM2.5 by sector for a city: daily (IITM DSS, Delhi) or a static study."""
+
+    __tablename__ = "source_shares"
+    __table_args__ = (
+        UniqueConstraint(
+            "district_id", "date", "sector", name="uq_source_shares",
+            postgresql_nulls_not_distinct=True,
+        ),
+        CheckConstraint(_in("sector", SOURCE_SECTORS), name="ck_source_shares_sector"),
+        CheckConstraint("share_pct >= 0 AND share_pct <= 100", name="ck_source_shares_pct"),
+    )  # fmt: skip
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    # nullable spelled out: the attribute name `date` shadows the type in the annotation
+    date: Mapped[date | None] = mapped_column(Date, nullable=True)  # NULL for a static study
+    sector: Mapped[str] = mapped_column(String(32))
+    share_pct: Mapped[float] = mapped_column(Float)  # as published
+    source_name: Mapped[str] = mapped_column(String(256))
+    source_url: Mapped[str | None] = mapped_column(String(512))
+    source_year: Mapped[int | None] = mapped_column(Integer)
+    is_daily: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    loaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

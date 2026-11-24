@@ -10,6 +10,7 @@ Jobs:
   history        one-off: ~2 years of daily AQI (OpenAQ daily means) + CAMS/weather features
   forecast       nightly: recent daily AQI + features, backtest gate, retrain, 10-day forecast
   backtest       full 12-month backtest -> docs/models/backtest.md
+  sources        load pollution-source shares from backend/app/data/*.csv
   hourly         all of the above, each logged separately in fetch_log
   cloud          all except cpcb (for GitHub-hosted runners)
 
@@ -88,6 +89,13 @@ def backtest_report(session: Session, http: HttpClient, districts, stats) -> Non
     stats.notes.append(f"wrote {out}")
 
 
+def load_sources(session: Session, http: HttpClient, districts, stats) -> None:
+    """Reviewed CSVs (studies + manually entered Delhi DSS days) -> source_shares."""
+    from app.sources import load
+
+    stats.rows += load(session)
+
+
 COLLECTORS: dict[str, Collector] = {
     "cpcb": cpcb.run,
     "openaq": openaq.run,
@@ -97,6 +105,7 @@ COLLECTORS: dict[str, Collector] = {
     "history": history.run_backfill,
     "forecast": forecast,
     "backtest": backtest_report,
+    "sources": load_sources,
 }
 GROUPS = {
     "hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize"],

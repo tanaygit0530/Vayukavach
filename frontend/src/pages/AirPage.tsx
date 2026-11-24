@@ -122,7 +122,7 @@ export function AirPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="sr-only">Air quality in {district?.name ?? place}</h1>
-      <section aria-label="Pollution map and current air quality" className="relative">
+      <section aria-label="Pollution map and current air quality" className="relative isolate">
         <PollutionMap place={place} district={district} className="h-[360px] shadow-card md:h-[540px]" />
         <Bubbles place={place} size="desktop" />
       </section>
@@ -130,7 +130,7 @@ export function AirPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <AqiChart place={place} />
         <HealthAdvice place={place} />
-        <SourceList />
+        <SourceList place={place} />
         <PollutantBars place={place} />
         <WindCompass place={place} />
       </div>

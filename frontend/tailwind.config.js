@@ -11,10 +11,14 @@ export default {
       },
       fontWeight: { light: '300', normal: '400', medium: '500', semibold: '600' },
       colors: {
-        ink: { DEFAULT: 'var(--text)', muted: 'var(--text-muted)' },
-        accent: 'var(--accent)',
+        // <alpha-value> keeps opacity modifiers (e.g. bg-ink/20) working with CSS variables
+        ink: {
+          DEFAULT: 'rgb(var(--text-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--text-muted-rgb) / <alpha-value>)',
+        },
+        accent: 'rgb(var(--accent-rgb) / <alpha-value>)',
         page: 'var(--page-bg)',
-        stale: 'var(--stale)',
+        stale: 'rgb(var(--stale-rgb) / <alpha-value>)',
         aqi: {
           good: 'var(--aqi-good)',
           satisfactory: 'var(--aqi-satisfactory)',

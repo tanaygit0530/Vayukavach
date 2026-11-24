@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.analysis.time import IST
+from app.analysis.time import IST, ist_date
 from app.api.common import (
     DB_TTL,
     EXTERNAL_TTL,
@@ -23,7 +23,7 @@ from app.api.common import (
     to_ist,
 )
 from app.models import District
-from app.services import air, airmap
+from app.services import air, airmap, sources
 from app.services import weather as wx
 from app.services.reference import CPCB_HEALTH, CPCB_HEALTH_SOURCE
 
@@ -363,3 +363,37 @@ def air_map(
         updated = datetime.fromisoformat(data["time_ist"]).replace(tzinfo=IST)
     return {"bbox": list(box), "grid": data["grid"], "cells": data["cells"],
             **meta(SRC_CAMS, updated, "estimated", now)}  # fmt: skip
+
+
+class SectorShare(BaseModel):
+    sector: str
+    label: str
+    share_pct: float  # scaled so the sectors add up to exactly 100
+    published_pct: float  # as published by the source
+
+
+class Sources(Meta):
+    district: str
+    kind: str | None  # daily (IITM DSS) | study (static) | None (no data)
+    date: date | None
+    sectors: list[SectorShare]
+    source_name: str | None
+    source_url: str | None
+    source_year: int | None
+    published_sum: float | None
+    note: str | None
+
+
+@router.get("/{district}/sources", response_model=Sources)
+def pollution_sources(
+    district: District = Depends(get_district),
+    session: Session = Depends(get_session),
+    now: datetime = Depends(get_now),
+):
+    """Share of PM2.5 by sector: IITM DSS daily values (Delhi) or a published study."""
+    data = sources.sources_for(session, district, ist_date(now))
+    return {
+        **{k: v for k, v in data.items() if k != "loaded_at"},
+        "district": district.slug,
+        **meta(data["source_name"] or "No source data", data["loaded_at"], "estimated", now),
+    }

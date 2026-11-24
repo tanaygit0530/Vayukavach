@@ -9,6 +9,7 @@ import {
   type AirNow,
   type Co2,
   type HeatReport,
+  type Sources,
   type HeatSummary,
   type SunDay,
   type Uv,
@@ -180,5 +181,13 @@ export function useHeat(place: string) {
     queryKey: ['heat', place],
     queryFn: () => apiGet<HeatReport>(`/heat/${place}`),
     staleTime: 10 * MINUTE,
+  })
+}
+
+export function useSources(place: string) {
+  return useQuery({
+    queryKey: ['sources', place],
+    queryFn: () => apiGet<Sources>(`/air/${place}/sources`),
+    staleTime: 60 * MINUTE,
   })
 }

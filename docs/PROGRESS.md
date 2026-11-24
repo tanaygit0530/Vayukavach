@@ -384,4 +384,53 @@ Tests: backend 153, jobs 60, frontend 32.
 - Outlook range coverage is 75% (target 80%); calibration is future work.
 - The full nightly job takes about 7 minutes (52 weekly retrains).
 
-**Next:** Phase 9, Pollution sources.
+
+## Phase 9: Pollution sources — complete (2026-11-24)
+
+**Built**
+- Table `source_shares` (migration 0008, RLS; unique on district/date/sector with
+  `NULLS NOT DISTINCT` so static rows upsert). Sectors: the spec's list plus the ones the sources
+  actually report (power plants, combined dust, diesel generators, brick kilns, sea salt,
+  outside the city).
+- Reviewed seed data in `backend/app/data/` (README explains each file):
+  - `source_shares_studies.csv`: Lucknow, Kolkata, Hyderabad, Shimla and Mumbai from
+    UrbanEmissions.info APnA city reports ("PM2.5 concentration: source-wise percentage share in
+    2018"). The PDFs' text gives the numbers in pie order, not label order, so the values were
+    read from the rendered charts (leader lines + APnA's fixed sector colours).
+  - `delhi_dss_daily.csv`: IITM DSS "Fractional contribution to PM2.5 in Delhi" daily means for
+    23–26 Nov 2026, entered manually.
+- `run.py sources` loads both (checks every set sums to 100: ±0.5 for studies, ±1.5 for DSS,
+  whose published values add up to ~101%).
+- `GET /api/v1/air/{d}/sources`: latest daily DSS set (≤ 2 days old) else the study; scaled to
+  exactly 100 with the published values kept; empty when there is no data.
+- Air tab "Pollution Sources" card: icons, %, thin bars; subtitle "Today, IITM DSS",
+  "IITM DSS, <date>" or "Study estimate, <year>"; source link; "No source data for this city yet".
+
+**IITM DSS terms:** the site (ews.tropmet.res.in/dss) publishes no terms of use, no robots.txt and
+no data API, and its pages take minutes to load. Per the spec, no automated collector: values
+are entered manually from the Daily Mean page (procedure in `backend/app/data/README.md`).
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| Delhi shows a dated source breakdown | Pass: "Today, IITM DSS" (24 Nov 2026): transport 21.2%, outside the city 25.0%, … |
+| At least 5 other cities show study-based shares with citations | Pass: Lucknow, Kolkata, Hyderabad, Shimla, Mumbai (APnA, 2018, linked) |
+| Cities without data show the empty state | Pass: Kanpur, Chennai, Bengaluru, Patna (their APnA reports are not online) |
+
+**Fixed along the way (from earlier phases)**
+- The Places drawer opened **under** the map (Leaflet panes use z-index 400–700): the map now
+  isolates its stacking context and the drawer sits on top (checked in Chromium).
+- Tailwind opacity modifiers on theme colours (`bg-ink/20`, `border-ink-muted/40`, …) were
+  silently dropped because the colours were CSS variables: theme colours now use RGB channels
+  with `<alpha-value>` (drawer backdrop, estimated borders and badges now render).
+- The Mac job also triggers the nightly forecast once a day (GitHub's schedule did not fire).
+
+Tests: backend 159, jobs 60, frontend 33.
+
+**Known issues**
+- Delhi daily values need someone to enter them from the DSS page each day (or written
+  permission from IITM for an automated collector); after 2 days without an entry Delhi shows
+  no source data (there is no static Delhi study in the seed yet).
+- Studies are 2018 model estimates; they are labelled as such.
+
+**Next:** Phase 10, Clean Air and Cool Places Finder.

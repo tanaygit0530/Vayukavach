@@ -141,3 +141,31 @@ describe('Air cards', () => {
     expect(await screen.findByText(/Average AQI 248/)).toBeInTheDocument()
   })
 })
+
+describe('Pollution sources card', () => {
+  it('daily DSS, study and empty states', async () => {
+    const { SourceList } = await import('../components/air/SourceList')
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+    stubFetch({
+      '/air/delhi/sources': { ...META, kind: 'daily', date: today, source_year: 2026, published_sum: 101.0,
+        source_name: 'IITM DSS', source_url: 'https://ews.tropmet.res.in/dss/DSSmean.php', note: null,
+        sectors: [{ sector: 'transport', label: 'Transport', share_pct: 60, published_pct: 60.6 },
+                  { sector: 'other', label: 'Other', share_pct: 40, published_pct: 40.4 }] },
+      '/air/kolkata/sources': { ...META, kind: 'study', date: null, source_year: 2018, published_sum: 100.1,
+        source_name: 'APnA', source_url: null, note: null,
+        sectors: [{ sector: 'industry', label: 'Industry', share_pct: 100, published_pct: 100.1 }] },
+      '/air/patna/sources': { ...META, kind: null, date: null, sectors: [], source_name: null,
+        source_url: null, source_year: null, published_sum: null, note: null },
+    }) // prettier-ignore
+    const { unmount } = withQuery(<SourceList place="delhi" />)
+    expect(await screen.findByText('Today, IITM DSS')).toBeInTheDocument()
+    expect(screen.getByText('60.0%')).toBeInTheDocument()
+    expect(screen.getByText(/add up to 101%; scaled to 100/)).toBeInTheDocument()
+    unmount()
+    const k = withQuery(<SourceList place="kolkata" />)
+    expect(await screen.findByText('Study estimate, 2018')).toBeInTheDocument()
+    k.unmount()
+    withQuery(<SourceList place="patna" />)
+    expect(await screen.findByText('No source data for this city yet')).toBeInTheDocument()
+  })
+})

@@ -144,7 +144,9 @@ export function PollutionMap({ place, district, className }: Props) {
     'focus-ring glass-card grid h-[44px] w-[44px] place-items-center rounded-full text-ink hover:bg-white'
 
   return (
-    <div className={clsx('relative overflow-hidden rounded-card', className)}>
+    // `isolate`: Leaflet's panes use z-index 400-700; keep them inside the map so overlays like
+    // the Places drawer always sit on top.
+    <div className={clsx('relative isolate overflow-hidden rounded-card', className)}>
       <div ref={el} className="vk-map h-full w-full" aria-label="Pollution map" role="region" />
 
       {/* legend */}

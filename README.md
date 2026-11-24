@@ -71,6 +71,7 @@ mindmap
 |---|---|:-:|
 | **Air Trust** | Official AQI **next to** a shadow AQI that fills missing hours, the share of readings that actually arrived, and a flag when gaps cluster in the most polluted hours | ✅ |
 | **Air tab** | Pollution map, station pins (measured / estimated / silent), hourly · 10-day · monthly AQI, pollutants, wind, CPCB health advice | ✅ |
+| **Pollution sources** | Share of PM2.5 by sector: IITM DSS daily for Delhi, APnA studies (2018) for 5 cities, honest empty state elsewhere | ✅ |
 | **Temperature tab** | Feels-like with a reason, 7 AM–7 PM trend, 10-day forecast, sun arc, UV gauge, CSV export | ✅ |
 | **Heat Shield** | Heat index + wet-bulb, Normal → Extreme colour-by-danger page, safe work windows, NDMA tips | ✅ |
 | **Finder** | Cleaner or cooler places with routes and precautions | ⏳ |
@@ -284,7 +285,7 @@ flowchart LR
 | Analysis & ML | pandas, NumPy, LightGBM (quantile + bias-correction models), scikit-learn: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
 | API | FastAPI, Pydantic models, TTL cache, per-IP rate limit, OpenAPI docs |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
-| Quality | pytest (213 tests), Vitest (32) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
+| Quality | pytest (219 tests), Vitest (33) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
 
 ---
 
@@ -338,8 +339,8 @@ gantt
   7 Heat tab                     :done, 2026-11-23, 1d
   section Features
   8 AQI forecasts days 1-10      :done, 2026-11-23, 1d
-  9 Pollution sources            :active, 2026-11-24, 1d
-  10 Clean air and cool finder   :2026-11-28, 2d
+  9 Pollution sources            :done, 2026-11-24, 1d
+  10 Clean air and cool finder   :active, 2026-11-24, 2d
   11 Ask VayuKavach chatbot      :2026-11-30, 2d
   12 Alerts, tests, deploy       :2026-12-02, 2d
 ```

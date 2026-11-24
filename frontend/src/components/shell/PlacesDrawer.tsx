@@ -76,7 +76,7 @@ export function PlacesDrawer({ open, place, onClose, onChoose }: Props) {
 
   return (
     <div
-      className={clsx('fixed inset-0 z-50', open ? 'pointer-events-auto' : 'pointer-events-none')}
+      className={clsx('fixed inset-0 z-[1000]', open ? 'pointer-events-auto' : 'pointer-events-none')}
       aria-hidden={!open}
     >
       <div

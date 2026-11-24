@@ -290,3 +290,22 @@ export interface HeatReport extends Meta {
   tips_source: string
   thresholds_status: string
 }
+
+export interface SectorShare {
+  sector: string
+  label: string
+  share_pct: number
+  published_pct: number
+}
+
+export interface Sources extends Meta {
+  district: string
+  kind: 'daily' | 'study' | null
+  date: string | null
+  sectors: SectorShare[]
+  source_name: string | null
+  source_url: string | null
+  source_year: number | null
+  published_sum: number | null
+  note: string | null
+}
