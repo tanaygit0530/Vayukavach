@@ -49,6 +49,9 @@ def districts(session):
 
 @pytest.fixture
 def api_keys(monkeypatch):
+    # alerts: never reach a real mail server or Twilio from tests
+    for key in ("SMTP_HOST", "SMTP_FROM", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"):
+        monkeypatch.setenv(key, "")
     monkeypatch.setenv("DATA_GOV_IN_API_KEY", "test-key")
     monkeypatch.setenv("OPENAQ_API_KEY", "test-key")
     get_settings.cache_clear()

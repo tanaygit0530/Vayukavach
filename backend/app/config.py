@@ -23,6 +23,23 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     ors_api_key: str = ""  # optional: OpenRouteService; without it routes use public OSRM
     frontend_origin: str = "http://localhost:5180"
+    # public links in alerts (unsubscribe); default = local API
+    public_api_url: str = "http://localhost:8000"
+    # alerts: email over SMTP (e.g. Gmail: smtp.gmail.com, 587, an app password)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    # alerts: SMS and WhatsApp over Twilio
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_sms_from: str = ""  # a Twilio number, e.g. +1...
+    twilio_whatsapp_from: str = ""  # sandbox: whatsapp:+14155238886
+    twilio_whatsapp_join: str = ""  # sandbox join phrase, shown on the sign-up page
+    # who hears about failing collectors (email and/or WhatsApp/SMS number)
+    admin_email: str = ""
+    admin_phone: str = ""
     rate_limit_per_minute: int = 300  # one Air page load makes ~10 calls
 
 

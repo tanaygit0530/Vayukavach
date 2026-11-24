@@ -145,7 +145,7 @@ def test_unknown_tool_and_bad_args_are_data_not_errors(session):
 
 def test_chat_endpoint_logs_redacted_questions_and_rate_limits(client, db_engine, monkeypatch):
     monkeypatch.setattr(service, "engine_name", lambda: "rules")
-    chat_api._buckets.clear()
+    chat_api.limiter.clear()
     body = client.post(
         "/api/v1/chat",
         json={"message": "AQI in Delhi? mail me at a.b@x.com or +91 98765 43210", "place": "delhi"},
@@ -159,7 +159,7 @@ def test_chat_endpoint_logs_redacted_questions_and_rate_limits(client, db_engine
         for _ in range(12)
     ]
     assert 429 in codes
-    chat_api._buckets.clear()
+    chat_api.limiter.clear()
 
 
 def test_forecast_days_are_labelled_relative_to_today(session):

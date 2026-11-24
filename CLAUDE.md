@@ -32,7 +32,7 @@ clear advice on what to do.
 - Jobs: GitHub Actions cron (hourly collectors, nightly retrain)
 - Frontend: React + Vite + TypeScript + Tailwind, React Router, TanStack Query,
   Leaflet + OpenStreetMap
-- AI: Gemini API free tier (fallback Gemma via Ollama); alerts via Telegram Bot API
+- AI: Gemini API free tier (fallback Gemma via Ollama); alerts by email (Python SMTP), SMS and WhatsApp (Twilio)
 - Hosting: Vercel (frontend), Render or Railway (backend)
 
 ## Data sources (all free)

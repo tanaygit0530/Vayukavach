@@ -75,9 +75,12 @@ export interface WeatherNow extends Meta {
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  /** Machine-readable reason, when the API sends `detail: {code, message}`. */
+  code?: string
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -87,12 +90,17 @@ export async function apiGet<T>(path: string, params?: Record<string, string>): 
   const response = await fetch(url)
   if (!response.ok) {
     let detail = response.statusText
+    let code: string | undefined
     try {
-      detail = (await response.json()).detail ?? detail
+      const d = (await response.json()).detail
+      if (d && typeof d === 'object') {
+        detail = d.message ?? detail
+        code = d.code
+      } else if (typeof d === 'string') detail = d
     } catch {
       /* not JSON */
     }
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status, detail, code)
   }
   return response.json() as Promise<T>
 }
@@ -360,12 +368,17 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   })
   if (!response.ok) {
     let detail = response.statusText
+    let code: string | undefined
     try {
-      detail = (await response.json()).detail ?? detail
+      const d = (await response.json()).detail
+      if (d && typeof d === 'object') {
+        detail = d.message ?? detail
+        code = d.code
+      } else if (typeof d === 'string') detail = d
     } catch {
       /* not JSON */
     }
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status, detail, code)
   }
   return response.json() as Promise<T>
 }
@@ -383,4 +396,27 @@ export interface ChatReply {
   refused: boolean
   language: 'en' | 'hi' | 'mr'
   engine: 'gemini' | 'ollama' | 'rules' | 'scope'
+}
+
+export interface AlertChannels {
+  email: boolean
+  sms: boolean
+  whatsapp: boolean
+  whatsapp_join: string | null
+  whatsapp_number: string | null
+}
+
+export interface AlertSubscribeReply {
+  id: number
+  status: 'code_sent' | 'already_subscribed'
+  sent_to: string
+}
+
+export interface AlertVerifyReply {
+  verified: boolean
+  channel: string
+  sent_to: string
+  place: string
+  daily: boolean
+  instant: boolean
 }

@@ -23,11 +23,12 @@ def test_hourly_runs_every_collector_and_logs_each(session, api_keys, monkeypatc
     results = run.run_collectors(session, run.GROUPS["hourly"], lambda name: mock_http(
         fixture_router))  # fmt: skip
     assert results == {
-        "cpcb": "ok", "openmeteo-air": "ok", "weather": "ok", "openaq": "ok", "summarize": "ok"
+        "cpcb": "ok", "openmeteo-air": "ok", "weather": "ok", "openaq": "ok", "summarize": "ok",
+        "alerts": "skipped",  # no SMTP / Twilio configured in tests
     }  # fmt: skip
     assert session.scalar(select(func.count()).select_from(District)) == 10
     logs = session.execute(select(FetchLog.source, FetchLog.status)).all()
-    assert sorted(logs) == sorted((k, "ok") for k in results)
+    assert sorted(logs) == sorted(results.items())
     assert session.scalar(select(func.count()).select_from(Reading)) > 0
 
 

@@ -449,3 +449,49 @@ class ChatLog(Base):
     engine: Mapped[str] = mapped_column(String(16))
     tools: Mapped[list] = mapped_column(JSON)
     had_sources: Mapped[bool] = mapped_column(Boolean)
+
+
+ALERT_CHANNELS = ("email", "sms", "whatsapp")
+
+
+class AlertSubscription(Base):
+    """Someone who asked for VayuKavach alerts on one channel for one district.
+
+    `address` is an email or an E.164 phone number: personal data, so the table has RLS on and
+    addresses are never logged. Codes are stored hashed. `token` signs the unsubscribe link."""
+
+    __tablename__ = "alert_subscriptions"
+    __table_args__ = (UniqueConstraint("channel", "address", "district_id", name="uq_alert_sub"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    channel: Mapped[str] = mapped_column(String(8))  # email | sms | whatsapp
+    address: Mapped[str] = mapped_column(String(254))
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id", ondelete="CASCADE"))
+    language: Mapped[str] = mapped_column(String(2))
+    daily: Mapped[bool] = mapped_column(Boolean)  # 7 AM IST summary
+    instant: Mapped[bool] = mapped_column(Boolean)  # Very poor / Severe AQI, Danger heat
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    code_hash: Mapped[str | None] = mapped_column(String(64))
+    code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    code_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    token: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_daily_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_aqi_level: Mapped[str | None] = mapped_column(String(16))  # category key last alerted
+    last_heat_level: Mapped[str | None] = mapped_column(String(16))
+
+
+class AlertLog(Base):
+    """Every alert attempt (no message text, no address): kind, result, short error."""
+
+    __tablename__ = "alert_log"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    subscription_id: Mapped[int | None] = mapped_column(
+        ForeignKey("alert_subscriptions.id", ondelete="SET NULL"), nullable=True
+    )
+    kind: Mapped[str] = mapped_column(String(48), index=True)  # daily | aqi | heat | verify | ...
+    channel: Mapped[str] = mapped_column(String(8))
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ok: Mapped[bool] = mapped_column(Boolean)
+    error: Mapped[str | None] = mapped_column(String(200))

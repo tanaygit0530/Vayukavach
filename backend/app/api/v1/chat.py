@@ -1,5 +1,3 @@
-import threading
-import time
 from datetime import datetime
 
 import httpx
@@ -8,23 +6,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.common import get_http, get_now, get_session
+from app.api.limits import Bucket, client_key
 from app.chat.service import respond
 
 router = APIRouter(tags=["chat"])
 
 PER_MINUTE = 10  # per client: LLM calls are the scarce resource
-_buckets: dict[str, tuple[float, float]] = {}
-_lock = threading.Lock()
-
-
-def _allow(key: str) -> bool:
-    now = time.monotonic()
-    with _lock:
-        tokens, last = _buckets.get(key, (float(PER_MINUTE), now))
-        tokens = min(PER_MINUTE, tokens + (now - last) * PER_MINUTE / 60)
-        ok = tokens >= 1
-        _buckets[key] = (tokens - 1 if ok else tokens, now)
-        return ok
+limiter = Bucket(PER_MINUTE, 60)
 
 
 class ChatIn(BaseModel):
@@ -58,10 +46,7 @@ def chat(
 ):
     """Ask VayuKavach. Answers only from VayuKavach's data, with sources; refuses anything
     outside air quality, heat and the app."""
-    client = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
-        request.client.host if request.client else "unknown"
-    )
-    if not _allow(client):
+    if not limiter.allow(client_key(request)):
         raise HTTPException(status_code=429, detail="Too many questions. Please wait a minute.")
     r = respond(session, http, now, body.message, body.place, body.language)
     return {

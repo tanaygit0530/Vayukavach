@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 
 import { AppShell } from './components/shell/AppShell'
 import { AirPage } from './pages/AirPage'
+import { AlertsPage } from './pages/AlertsPage'
 import { AskPage } from './pages/AskPage'
 import { FinderPage } from './pages/FinderPage'
 import { HeatPage } from './pages/HeatPage'
@@ -23,10 +24,7 @@ export default function App() {
         <Route path="heat" element={<HeatPage />} />
         <Route path="finder" element={<FinderPage />} />
         <Route path="ask" element={<AskPage />} />
-        <Route
-          path="alerts"
-          element={<Placeholder title="Alerts" phase={12} note="Telegram alerts for AQI and heat." />}
-        />
+        <Route path="alerts" element={<AlertsPage />} />
         <Route
           path="profile"
           element={<Placeholder title="Profile" phase={12} note="Language and saved places." />}

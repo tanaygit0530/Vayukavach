@@ -34,7 +34,23 @@ def conn(db_engine):
 @pytest.fixture(autouse=True)
 def _no_live_services(monkeypatch):
     """Tests never use the developer's real API keys or call live AI/routing services."""
-    for key in ("GEMINI_API_KEY", "OLLAMA_MODEL", "ORS_API_KEY", "TELEGRAM_BOT_TOKEN"):
+    for key in (
+        "GEMINI_API_KEY",
+        "OLLAMA_MODEL",
+        "ORS_API_KEY",
+        "TELEGRAM_BOT_TOKEN",
+        "SMTP_HOST",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+        "SMTP_FROM",
+        "TWILIO_ACCOUNT_SID",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_SMS_FROM",
+        "TWILIO_WHATSAPP_FROM",
+        "TWILIO_WHATSAPP_JOIN",
+        "ADMIN_EMAIL",
+        "ADMIN_PHONE",
+    ):
         monkeypatch.setenv(key, "")
     get_settings.cache_clear()
     yield

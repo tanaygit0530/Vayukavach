@@ -96,6 +96,23 @@ def load_sources(session: Session, http: HttpClient, districts, stats) -> None:
     stats.rows += load(session)
 
 
+def alerts(session: Session, http: HttpClient, districts, stats) -> None:
+    """Daily 7 AM summaries, instant AQI/heat alerts and collector-failure notices. Safe to run
+    from the Mac and the cloud in the same hour: sends are de-duplicated per subscription."""
+    from app.alerts.channels import Sender, available
+    from app.alerts.service import run
+    from collectors.common import utc_now
+
+    if not any(available().values()):
+        stats.skipped = True
+        stats.notes.append("no alert channel configured (SMTP / Twilio)")
+        return
+    r = run(session, Sender(), utc_now())
+    stats.rows = sum(r.sent.values())
+    stats.errors = r.failed
+    stats.notes.append(f"sent {r.sent}, failed {r.failed}, admin {r.admin or '-'}")
+
+
 COLLECTORS: dict[str, Collector] = {
     "cpcb": cpcb.run,
     "openaq": openaq.run,
@@ -106,12 +123,13 @@ COLLECTORS: dict[str, Collector] = {
     "forecast": forecast,
     "backtest": backtest_report,
     "sources": load_sources,
+    "alerts": alerts,
 }
 GROUPS = {
-    "hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize"],
+    "hourly": ["cpcb", "openmeteo-air", "weather", "openaq", "summarize", "alerts"],
     # GitHub-hosted runners: data.gov.in refuses connections from them (checked 2026-11-23),
     # so CPCB runs from a machine in India (jobs/scripts/install_cpcb_launchd.sh).
-    "cloud": ["openmeteo-air", "weather", "openaq", "summarize"],
+    "cloud": ["openmeteo-air", "weather", "openaq", "summarize", "alerts"],
 }
 JOBS = sorted([*COLLECTORS, *GROUPS])
 
