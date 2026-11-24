@@ -17,6 +17,13 @@ uv sync --quiet --locked && uv run --quiet python run.py cpcb
 REPO="$(git -C "$RUNTIME/repo" remote get-url origin | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')"
 if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   gh workflow run collect-hourly.yml -R "$REPO" -f job=cloud && echo "triggered cloud collection on $REPO"
+  # The nightly forecast schedule is unreliable too: trigger it once a day, on the first run
+  # after 03:00 IST (a marker file remembers the last day it was triggered).
+  today="$(TZ=Asia/Kolkata date +%F)"
+  if [[ "$(TZ=Asia/Kolkata date +%H)" -ge 3 && "$(cat "$RUNTIME/last_forecast" 2>/dev/null)" != "$today" ]]; then
+    gh workflow run forecast-nightly.yml -R "$REPO" && echo "$today" > "$RUNTIME/last_forecast" \
+      && echo "triggered nightly forecast on $REPO"
+  fi
 else
-  echo "gh not logged in: cloud collection relies on GitHub's schedule"
+  echo "gh not logged in: collection relies on GitHub's schedules"
 fi
