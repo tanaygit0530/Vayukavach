@@ -142,10 +142,15 @@ export function AirPage() {
       <Bubbles place={place} size="phone" />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <AqiChart place={place} />
-        <HealthAdvice place={place} />
-        <SourceList place={place} />
-        <PollutantBars place={place} />
-        <WindCompass place={place} />
+        {/* advice and wind share the column beside the chart, so neither stretches empty */}
+        <div className="flex flex-col gap-4">
+          <HealthAdvice place={place} />
+          <WindCompass place={place} className="flex-1" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:col-span-3">
+          <SourceList place={place} />
+          <PollutantBars place={place} />
+        </div>
       </div>
     </div>
   )

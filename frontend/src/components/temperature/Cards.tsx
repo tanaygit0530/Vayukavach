@@ -2,7 +2,9 @@ import { ArrowRight, Droplets, Gauge, Moon, Sun, Sunrise, Sunset, Thermometer, W
 import { Link } from 'react-router'
 
 import type { WeatherDay, WeatherHour, WeatherNowFull } from '../../lib/api'
-import { useHeatSummary, useSun, useUv } from '../../lib/queries'
+import { aqiVar } from '../../lib/aqi'
+import { formatIstTime } from '../../lib/format'
+import { useAirNow, useHeatSummary, useSun, useUv } from '../../lib/queries'
 import {
   cloudNote,
   fmtClock,
@@ -14,7 +16,7 @@ import {
   trendPoints,
   uvAngle,
 } from '../../lib/weather'
-import { EstimatedBadge, StaleBadge } from '../ui/Badges'
+import { EstimatedBadge, MeasuredBadge, StaleBadge } from '../ui/Badges'
 import { Card } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
 import { SkyIcon } from '../ui/SkyIcon'
@@ -31,7 +33,7 @@ export function MyLocationCard({ place, name, state, now, loading }: {
   const sun = useSun(place).data?.days[0]
   const night = !!sun && sunFraction(sun.sunrise, sun.sunset, new Date()) === null
   return (
-    <Card className="relative flex min-h-[300px] flex-col overflow-hidden" as="article">
+    <Card className="relative flex min-h-[300px] flex-1 flex-col overflow-hidden" as="article">
       <div className="relative z-10 flex items-start justify-between">
         <div>
           <h2 className="text-[17px] font-medium">{name}</h2>
@@ -60,7 +62,7 @@ export function MyLocationCard({ place, name, state, now, loading }: {
           </div>
         </div>
       )}
-      <Skyline className="pointer-events-none absolute inset-x-0 bottom-0 h-[110px] w-full" />
+      <Skyline className="pointer-events-none absolute inset-x-0 bottom-0 h-[45%] min-h-[110px] w-full" />
     </Card>
   )
 }
@@ -170,10 +172,10 @@ export function ForecastList({ days, loading }: { days: WeatherDay[] | undefined
   const weekday = (date: string) =>
     new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`))
   return (
-    <Card title="10-day forecast" subtitle="Daily low and high on one shared scale">
+    <Card title="10-day forecast" subtitle="Daily low and high on one shared scale" className="flex flex-col">
       {loading && <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}</div>}
       {!loading && list.length === 0 && <EmptyState message="No forecast stored yet." />}
-      <ul className="divide-y divide-slate-100">
+      <ul className="flex flex-1 flex-col justify-between divide-y divide-slate-100">
         {list.map((d) => {
           const ok = d.temperature_min !== null && d.temperature_max !== null
           return (
@@ -384,6 +386,48 @@ export function ConditionGrid({ now, today, loading }: { now: WeatherNowFull | u
               </li>
             ))}
           </ul>
+        </>
+      )}
+    </Card>
+  )
+}
+
+const AQI_SOURCE: Record<string, string> = {
+  official: 'CPCB',
+  measured: 'CPCB/SPCB stations via OpenAQ',
+  cams: 'CAMS model',
+}
+
+/** The air side of today, so the weather tab links to it: one number, its source and label. */
+export function AirTodayCard({ place }: { place: string }) {
+  const q = useAirNow(place)
+  const d = q.data
+  const estimated = d?.aqi_kind === 'cams'
+  return (
+    <Card title="Air today" subtitle="India AQI right now" estimated={estimated} as="article">
+      {q.isLoading && <Skeleton className="h-12 w-full" />}
+      {q.isError && <EmptyState message="Could not load the AQI." />}
+      {d && d.aqi === null && <EmptyState message="No AQI reading in the last few hours" />}
+      {d && d.aqi !== null && (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-baseline gap-2">
+              <span aria-hidden className="h-3 w-3 self-center rounded-full" style={{ background: aqiVar(d.category_key) }} />
+              <span className="text-[34px] font-medium leading-none tracking-tight">{d.aqi}</span>
+              <span className="text-[14px] font-medium">{d.category}</span>
+            </p>
+            {estimated ? <EstimatedBadge /> : <MeasuredBadge />}
+          </div>
+          <p className="mt-2 text-[12px] text-ink-muted">
+            {AQI_SOURCE[d.aqi_kind ?? ''] ?? d.source}
+            {d.hour && ` · ${formatIstTime(new Date(new Date(d.hour).getTime() + 3_600_000))} IST`}
+          </p>
+          <Link
+            to={{ pathname: '/air', search: `?place=${place}` }}
+            className="focus-ring mt-3 inline-flex min-h-touch items-center gap-2 rounded-full bg-slate-100 px-4 text-[13px] font-medium hover:bg-slate-200"
+          >
+            Open the Air tab <ArrowRight aria-hidden className="h-4 w-4" />
+          </Link>
         </>
       )}
     </Card>

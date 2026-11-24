@@ -107,7 +107,7 @@ export function AlertsPage() {
         <Bell aria-hidden className="h-4 w-4" /> Alerts for {city}
       </h1>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_380px]">
         <Card title="Get air and heat alerts" subtitle="WhatsApp, SMS or email. Confirm with a 6-digit code; stop any time with the link in every message.">
           {done ? (
             <div role="status" className="flex items-start gap-3 rounded-[20px] bg-emerald-50 p-4 text-[14px] ring-1 ring-emerald-200">

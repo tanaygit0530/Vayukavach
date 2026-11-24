@@ -131,16 +131,33 @@ export function AskPage() {
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_320px]">
         <section aria-label="Conversation" className="glass-card flex min-h-[560px] flex-col p-5">
           <div className="flex-1 space-y-4 overflow-y-auto pr-1" role="log" aria-live="polite" aria-relevant="additions">
             {turns.length === 0 && (
-              <div className="flex items-start gap-3 text-[14px] text-ink-muted">
-                <Bot aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-                <p>
-                  Ask about air quality or heat in {city}. Answers use VayuKavach's own data only, with the source,
-                  time and whether each number is measured or estimated.
+              // empty conversation: a centred welcome with the suggestions, instead of a blank panel
+              <div className="flex h-full min-h-[380px] flex-col items-center justify-center px-4 text-center">
+                <span className="grid h-14 w-14 place-items-center rounded-full bg-accent/10">
+                  <Bot aria-hidden className="h-7 w-7 text-accent" />
+                </span>
+                <h2 className="mt-4 text-[20px] font-medium">Ask about air or heat in {city}</h2>
+                <p className="mt-2 max-w-[520px] text-[14px] text-ink-muted">
+                  Answers use VayuKavach's own data only, with the source, time and whether each number is
+                  measured or estimated.
                 </p>
+                <div className="mt-6 grid w-full max-w-[640px] gap-2 sm:grid-cols-2" aria-label="Suggested questions">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => send(s)}
+                      disabled={ask.isPending}
+                      className="focus-ring min-h-touch rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left text-[13px] hover:bg-white disabled:opacity-50"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {turns.map((t) =>
@@ -172,6 +189,7 @@ export function AskPage() {
             <div ref={endRef} />
           </div>
 
+          {turns.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2" aria-label="Suggested questions">
             {suggestions.map((s) => (
               <button
@@ -185,6 +203,7 @@ export function AskPage() {
               </button>
             ))}
           </div>
+          )}
 
           <form onSubmit={onSubmit} className="mt-3 flex items-center gap-2">
             <label className="flex-1">

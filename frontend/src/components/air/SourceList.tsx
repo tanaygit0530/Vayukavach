@@ -55,7 +55,7 @@ export function SourceList({ place }: { place: string }) {
         : `IITM DSS, ${fmtDate(d.date!)}`
       : `Study estimate, ${d.source_year ?? 'year unknown'}`
   return (
-    <Card title="Pollution Sources" subtitle={subtitle}>
+    <Card title="Pollution Sources" subtitle={subtitle} className="flex flex-col">
       {q.isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -72,7 +72,7 @@ export function SourceList({ place }: { place: string }) {
       )}
       {d?.kind && (
         <>
-          <ul className="divide-y divide-slate-100">
+          <ul className="flex flex-1 flex-col justify-between divide-y divide-slate-100">
             {d.sectors.map((s) => {
               const Icon = ICONS[s.sector] ?? CircleDashed
               return (

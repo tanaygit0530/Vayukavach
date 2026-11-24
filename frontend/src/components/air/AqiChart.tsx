@@ -14,7 +14,7 @@ import { Tabs } from '../ui/Tabs'
 export type Mode = 'hourly' | 'daily' | 'monthly'
 
 const W = 720
-const H = 260
+const H = 330
 const PAD = { left: 34, right: 8, top: 12, bottom: 28 }
 const PLOT_H = H - PAD.top - PAD.bottom
 const Y_MAX = 500

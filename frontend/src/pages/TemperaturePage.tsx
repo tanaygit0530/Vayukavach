@@ -2,6 +2,7 @@ import { Download, Thermometer } from 'lucide-react'
 import { useState } from 'react'
 
 import {
+  AirTodayCard,
   ConditionGrid,
   FeelsLikeCard,
   ForecastList,
@@ -12,6 +13,7 @@ import {
 } from '../components/temperature/Cards'
 import { useDistricts, useWeatherDaily, useWeatherFull, useWeatherHourly } from '../lib/queries'
 import { useShell } from '../lib/shell'
+import { WindCompass } from '../components/air/WindCompass'
 import { weatherCsv } from '../lib/weather'
 
 function download(filename: string, text: string) {
@@ -73,12 +75,14 @@ export function TemperaturePage() {
             loading={now.isLoading}
           />
           <FeelsLikeCard place={place} now={now.data} loading={now.isLoading} />
+          <AirTodayCard place={place} />
         </div>
         <div className="md:col-span-2 xl:col-span-2">
           <TempTrend hours={hourly.data?.hours} loading={hourly.isLoading} />
         </div>
-        <div className="xl:row-span-2">
+        <div className="flex flex-col gap-4 xl:row-span-2">
           <ConditionGrid now={now.data} today={daily.data?.days[0]} loading={now.isLoading || daily.isLoading} />
+          <WindCompass place={place} className="flex-1" />
         </div>
         <ForecastList days={daily.data?.days} loading={daily.isLoading} />
         <div className="flex flex-col gap-4">

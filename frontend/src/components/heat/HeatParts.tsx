@@ -122,16 +122,17 @@ export function HourlyStrip({ hours, now = new Date() }: { hours: HeatHourOut[];
   // Hours that start after now: the current hour is the hero number.
   const list = hours.filter((h) => new Date(h.hour).getTime() > now.getTime())
   return (
-    <HeatCard title="Hour by hour" subtitle="Level, temperature and feels-like for the rest of today" className="lg:col-span-2">
+    <HeatCard title="Hour by hour" subtitle="Level, temperature and feels-like for the rest of today" className="flex flex-col lg:col-span-2">
       {list.length === 0 ? (
         <p className="text-[13px] text-white/80">No more hours today. See the 10-day forecast.</p>
       ) : (
-        <ol className="flex gap-2 overflow-x-auto pb-1">
+        // columns share the full width (and the card's height), scrolling only when there are many hours
+        <ol className="grid flex-1 auto-cols-[minmax(84px,1fr)] grid-flow-col gap-2 overflow-x-auto pb-1">
           {list.map((h) => (
-            <li key={h.hour} className="flex min-w-[84px] flex-col items-center gap-1.5 rounded-2xl bg-white/10 px-2 py-3">
+            <li key={h.hour} className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/10 px-2 py-3">
               <span className="text-[12px] text-white/85">{clock(h.local_hour)}</span>
               <LevelPill level={h.level} small />
-              <span className="text-[18px] font-medium">{h.temperature == null ? '–' : `${Math.round(h.temperature)}°`}</span>
+              <span className="text-[24px] font-medium">{h.temperature == null ? '–' : `${Math.round(h.temperature)}°`}</span>
               <span className="text-[11px] text-white/80">feels {h.feels_like == null ? '–' : `${Math.round(h.feels_like)}°`}</span>
             </li>
           ))}
@@ -151,11 +152,11 @@ export function HeatForecast({ days }: { days: HeatDayOut[] }) {
   const day = (date: string) =>
     new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`))
   return (
-    <HeatCard title="Heat forecast" subtitle="Daily temperature range and the day's highest level">
+    <HeatCard title="Heat forecast" subtitle="Daily temperature range and the day's highest level" className="flex flex-col">
       {list.length === 0 ? (
         <p className="text-[13px] text-white/80">No forecast stored yet.</p>
       ) : (
-        <ul className="divide-y divide-white/10">
+        <ul className="flex flex-1 flex-col justify-between divide-y divide-white/10">
           {list.map((d) => (
             <li key={d.date} className="grid grid-cols-[58px_84px_34px_1fr_34px] items-center gap-2 py-2 text-[13px]">
               <span className="text-white/85">{d.is_forecast ? day(d.date) : 'Today'}</span>
@@ -184,12 +185,13 @@ export function HeatStress({ data }: { data: HeatReport }) {
     { icon: Droplets, label: 'Humidity', value: data.humidity, unit: '%' },
   ]
   return (
-    <HeatCard title="Heat stress" subtitle="Heat index (NWS) and wet-bulb (Stull 2011)">
-      <dl className="grid grid-cols-2 gap-3">
+    <HeatCard title="Heat stress" subtitle="Heat index (NWS) and wet-bulb (Stull 2011)" className="flex flex-col">
+      {/* the four tiles grow with the card instead of leaving a gap under them */}
+      <dl className="grid flex-1 auto-rows-fr grid-cols-2 gap-3">
         {rows.map((r) => (
-          <div key={r.label} className="rounded-2xl bg-white/10 p-3">
+          <div key={r.label} className="flex flex-col justify-center gap-3 rounded-2xl bg-white/10 p-4">
             <dt className="flex items-center gap-1.5 text-[12px] text-white/85"><r.icon aria-hidden className="h-3.5 w-3.5" />{r.label}</dt>
-            <dd className="mt-1 text-[22px] font-medium">{r.value == null ? <span className="text-[13px] font-normal">No reading</span> : `${Math.round(r.value)}${r.unit}`}</dd>
+            <dd className="text-[36px] font-medium leading-none tracking-tight">{r.value == null ? <span className="text-[13px] font-normal">No reading</span> : `${Math.round(r.value)}${r.unit}`}</dd>
           </div>
         ))}
       </dl>

@@ -68,13 +68,18 @@ body {
     @apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
   /* soft sky with faint clouds (Temperature tab) */
-  .sky-bg {
-    background:
-      radial-gradient(ellipse 30% 18% at 22% 18%, rgba(255, 255, 255, 0.75), transparent 70%),
-      radial-gradient(ellipse 26% 14% at 70% 12%, rgba(255, 255, 255, 0.6), transparent 70%),
-      radial-gradient(ellipse 34% 20% at 85% 60%, rgba(255, 255, 255, 0.5), transparent 70%),
-      radial-gradient(ellipse 28% 16% at 35% 75%, rgba(255, 255, 255, 0.45), transparent 70%),
-      linear-gradient(180deg, #d3d9df 0%, #e4e8ec 100%);
+  /* Cloudy sky behind the Air, Temperature, Ask and Alerts tabs (original render, see
+     docs/design/clouds-background.svg.html). Fixed layer so it stays put while the page scrolls. */
+  .clouds-bg {
+    background: transparent; /* the fixed ::before layer is the background */
+  }
+  .clouds-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: url('/clouds.webp') center / cover no-repeat, linear-gradient(180deg, #bfc9d2, #dfe4e8);
+    pointer-events: none;
   }
 }
 

@@ -12,7 +12,10 @@ export interface ShellContext {
 }
 
 const BACKGROUNDS: Record<string, string> = {
-  '/temperature': 'sky-bg',
+  '/air': 'clouds-bg',
+  '/temperature': 'clouds-bg',
+  '/ask': 'clouds-bg',
+  '/alerts': 'clouds-bg',
   '/heat': 'heat-bg',
 }
 

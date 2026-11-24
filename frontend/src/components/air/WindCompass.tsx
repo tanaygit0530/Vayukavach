@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { Wind as WindIcon } from 'lucide-react'
 
 import { useWind } from '../../lib/queries'
@@ -13,7 +14,7 @@ function Compass({ deg, label }: { deg: number; label: string }) {
   // Meteorological direction: where the wind comes FROM. The needle's head points there.
   const ticks = Array.from({ length: 72 }, (_, i) => i * 5)
   return (
-    <svg viewBox="0 0 180 180" className="h-[170px] w-[170px]" role="img" aria-label={`Wind from ${label}`}>
+    <svg viewBox="0 0 180 180" className="h-[140px] w-[140px]" role="img" aria-label={`Wind from ${label}`}>
       {ticks.map((t) => {
         const major = t % 45 === 0
         const a = ((t - 90) * Math.PI) / 180
@@ -48,7 +49,7 @@ function Compass({ deg, label }: { deg: number; label: string }) {
   )
 }
 
-export function WindCompass({ place }: { place: string }) {
+export function WindCompass({ place, className }: { place: string; className?: string }) {
   const q = useWind(place)
   const d = q.data
   return (
@@ -56,13 +57,15 @@ export function WindCompass({ place }: { place: string }) {
       title="Wind Status"
       subtitle="Speed, gusts and direction"
       action={d && (d.stale ? <StaleBadge updatedAt={d.updated_at} stale /> : <EstimatedBadge />)}
+      className={clsx('flex flex-col', className)}
     >
-      {q.isLoading && <Skeleton className="h-[170px] w-full" />}
+      {q.isLoading && <Skeleton className="h-[140px] w-full" />}
       {q.isError && <EmptyState message="Could not load wind." />}
       {d && (d.speed_kmh === null ? (
         <EmptyState />
       ) : (
-        <>
+        // centred, so the card can be stretched to line up with its neighbours without a gap
+        <div className="flex flex-1 flex-col justify-center">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="leading-none">
@@ -84,7 +87,7 @@ export function WindCompass({ place }: { place: string }) {
               {d.note}
             </p>
           )}
-        </>
+        </div>
       ))}
     </Card>
   )

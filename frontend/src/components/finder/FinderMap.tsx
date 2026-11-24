@@ -12,17 +12,21 @@ interface Props {
   selected: string | null
   route: [number, number][] | undefined
   onSelect: (id: string) => void
+  /** Room to keep clear of floating panels when fitting the map (pixels). */
+  padTopLeft?: [number, number]
+  padBottomRight?: [number, number]
 }
 
 /** Start pin (green), numbered destination pins, and the selected route line. */
-export function FinderMap({ origin, places, selected, route, onSelect }: Props) {
+export function FinderMap({ origin, places, selected, route, onSelect, padTopLeft = [40, 40], padBottomRight = [40, 40] }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const layer = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
     if (!el.current || map.current) return
-    const m = L.map(el.current, { zoomControl: true, center: [22.5, 79], zoom: 5 })
+    const m = L.map(el.current, { zoomControl: false, center: [22.5, 79], zoom: 5 })
+    L.control.zoom({ position: 'bottomright' }).addTo(m)
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       className: 'vk-tiles',
@@ -64,8 +68,15 @@ export function FinderMap({ origin, places, selected, route, onSelect }: Props) 
       route.forEach((pt) => bounds.push(pt))
     }
     const focus = route?.length ? route : bounds
-    m.fitBounds(L.latLngBounds(focus as L.LatLngExpression[]), { padding: [40, 40], maxZoom: 12 })
-  }, [origin, places, selected, route, onSelect])
+    m.invalidateSize()
+    m.fitBounds(L.latLngBounds(focus as L.LatLngExpression[]), {
+      paddingTopLeft: padTopLeft,
+      paddingBottomRight: padBottomRight,
+      maxZoom: 12,
+    })
+    // padding arrays are recreated each render; compare their values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origin, places, selected, route, onSelect, padTopLeft.join(), padBottomRight.join()])
 
-  return <div ref={el} className="vk-map relative isolate h-full min-h-[360px] w-full rounded-card" role="region" aria-label="Finder map" />
+  return <div ref={el} className="vk-map relative isolate h-full min-h-[360px] w-full" role="region" aria-label="Finder map" />
 }
