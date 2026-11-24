@@ -20,10 +20,6 @@
 ![Leaflet](https://img.shields.io/badge/Leaflet-OpenStreetMap-199900?logo=leaflet&logoColor=white)
 ![Cost](https://img.shields.io/badge/running%20cost-₹0-1F9D55)
 
-<img src="docs/screenshots/air-tab.jpg" alt="VayuKavach Air tab: Delhi pollution map with 82 CPCB stations, floating AQI, main pollutant, visibility and data-completeness bubbles" width="100%" />
-
-<sub>Air tab, Delhi, live data: 82 CPCB stations on the map, official AQI 246 (Poor), 92% of expected readings received, shadow AQI 251 (248–256).</sub>
-
 </div>
 
 ---
@@ -98,58 +94,9 @@ The same checks, run on the stored hourly station data for Delhi (CPCB/SPCB stat
 | AQI from the readings that arrived | 376 | 320 |
 | Shadow AQI (missing hours estimated) | 380 (378–381) | **340 (336–342)** |
 
-<img src="docs/screenshots/report-diwali.jpg" alt="Data report for Delhi on 9 November 2026: 93% complete, 42.6% of readings missing in polluted hours vs 3.6% in clean hours, flagged; four silent stations and 19 readings near the 999 cut-off" width="100%" />
-
 Across 10 cities and 28 days (25 Oct – 21 Nov), **8 city-days** were flagged, including Delhi on
 3, 4 and 9 Nov and Mumbai on 27 Oct, 3 and 4 Nov. The report describes completeness only; it
 does not say why readings were missing.
-
----
-
-## See it
-
-<table>
-<tr>
-<td width="62%"><img src="docs/screenshots/temperature-tab.jpg" alt="Temperature tab for Mumbai" /></td>
-<td width="38%"><img src="docs/screenshots/phone-air.jpg" alt="Air tab on a phone" /></td>
-</tr>
-<tr>
-<td><sub><b>Temperature tab</b> (Mumbai): moon after sunset, "Now" bubble, 10-day ranges on one scale, UV and condition cards.</sub></td>
-<td><sub><b>Phone</b>: the icon rail becomes a bottom bar; bubbles move under the map.</sub></td>
-</tr>
-<tr>
-<td colspan="2"><img src="docs/screenshots/heat-danger.jpg" alt="Heat tab at Danger level" /></td>
-</tr>
-<tr>
-<td colspan="2"><sub><b>Heat tab</b>: the whole page turns red at Danger. Big dot-matrix feels-like, the work-rest instruction, and a day arc where solid = safe hours and dotted = take care. (Danger shown with a test response; November data is Normal.)</sub></td>
-</tr>
-<tr>
-<td colspan="2"><img src="docs/screenshots/finder.jpg" alt="Finder: cleaner-air day trips from Delhi with a route to Kotputli" /></td>
-</tr>
-<tr>
-<td colspan="2"><sub><b>Finder</b>: from Delhi (AQI 234), day trips ranked by measured AQI and a 3-day outlook; the route to Kotputli (AQI 56) with official precautions and one-tap navigation.</sub></td>
-</tr>
-<tr>
-<td><img src="docs/screenshots/aqi-chart.jpg" alt="Hourly AQI chart with shadow estimates where official readings were missing" /></td>
-<td><img src="docs/screenshots/pollutants.jpg" alt="Pollutant sub-index bars" /></td>
-</tr>
-<tr>
-<td><sub><b>Hourly AQI</b>: solid = CPCB official, dashed outline = official reading missing (shadow estimate in the tooltip), faded = forecast.</sub></td>
-<td><sub><b>Pollutants</b>: 24-hour values and India AQI sub-index; CO₂ as context only.</sub></td>
-</tr>
-<tr>
-<td colspan="2"><img src="docs/screenshots/ask.jpg" alt="Ask VayuKavach: an answer with source chips and a refusal for an off-topic question" /></td>
-</tr>
-<tr>
-<td colspan="2"><sub><b>Ask VayuKavach</b>: answers only from VayuKavach's data, with a source chip (source · time · Measured/Estimated) under every answer; off-topic questions get a polite refusal and never reach the model.</sub></td>
-</tr>
-<tr>
-<td colspan="2"><img src="docs/screenshots/alerts.jpg" alt="Alerts sign-up: WhatsApp, SMS or email, language, daily and instant options, and a sample morning message in Hindi" /></td>
-</tr>
-<tr>
-<td colspan="2"><sub><b>Alerts</b>: sign up on WhatsApp, SMS or email; the sample is today's real 7 AM message. Every number in a message carries its source, time and label.</sub></td>
-</tr>
-</table>
 
 ---
 
@@ -299,8 +246,6 @@ City level, Delhi: **CPCB 249 · our measured AQI 250 · shadow AQI 249.**
 ---
 
 ## 10-day AQI forecast, tested on a year of history
-
-<img src="docs/screenshots/forecast-10day.jpg" alt="10-day AQI forecast for Delhi: corrected CAMS ranges for days 1-5 and wider outlook ranges for days 6-10" width="100%" />
 
 ```mermaid
 flowchart LR
