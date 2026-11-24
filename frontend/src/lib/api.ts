@@ -420,3 +420,42 @@ export interface AlertVerifyReply {
   daily: boolean
   instant: boolean
 }
+
+export interface GapReport extends Meta {
+  district: string
+  date: string
+  completeness_pct: number | null
+  gap_bias: {
+    flagged: boolean
+    polluted_hours_missing_pct: number | null
+    clean_hours_missing_pct: number | null
+    difference_pp: number | null
+  } | null
+  silent_stations: { station_id: number; name: string; from: string; to: string }[]
+  city_silent_hours: string[]
+  readings_near_limit: {
+    station_id: number
+    name: string | null
+    hour: string
+    pollutant: string
+    value: number | null
+    at_or_over_999: boolean
+  }[]
+  stations: {
+    station_id: number
+    name: string
+    pollutant: string
+    expected: number
+    received: number
+    excluded: number
+    pct: number
+    longest_gap_hours: number
+  }[]
+  wording: string
+}
+
+export function apiUrl(path: string, params?: Record<string, string>): string {
+  const url = new URL(`${API_BASE}/api/v1${path}`)
+  for (const [k, v] of Object.entries(params ?? {})) url.searchParams.set(k, v)
+  return url.toString()
+}

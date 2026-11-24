@@ -1,5 +1,6 @@
 import { Eye, Gauge, ShieldCheck, Wind } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 
 import { AqiChart } from '../components/air/AqiChart'
 import { HealthAdvice } from '../components/air/HealthAdvice'
@@ -82,12 +83,20 @@ function Bubbles({ place, size }: { place: string; size: 'desktop' | 'phone' }) 
           unit="%"
           label="Data completeness"
           detail={
-            d?.shadow_aqi != null ? (
-              <span className="text-ink-muted">
-                Shadow AQI {d.shadow_aqi}
-                {d.shadow_aqi_low != null && ` (${d.shadow_aqi_low}–${d.shadow_aqi_high})`}
-              </span>
-            ) : undefined
+            <>
+              {d?.shadow_aqi != null && (
+                <span className="block text-ink-muted">
+                  Shadow AQI {d.shadow_aqi}
+                  {d.shadow_aqi_low != null && ` (${d.shadow_aqi_low}–${d.shadow_aqi_high})`}
+                </span>
+              )}
+              <Link
+                to={{ pathname: '/reports', search: `?place=${place}` }}
+                className="focus-ring mt-0.5 inline-block rounded text-accent underline-offset-2 hover:underline"
+              >
+                Data report
+              </Link>
+            </>
           }
           loading={loading}
           error={air.isError}
