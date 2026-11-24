@@ -78,14 +78,40 @@ body {
   .glass-card .bg-slate-100 {
     background-color: rgba(255, 255, 255, 0.35);
   }
-  /* the Heat tab's coloured page needs near-white chrome (rail, top bar) to stay readable */
+  /* Heat tab: the rail and top bar take the page's colour, like the heat cards: dark-tinted
+     glass with white text (same 4.5:1 tint logic as .heat-card) */
   .heat-bg {
-    --card-bg: rgba(255, 255, 255, 0.86);
-    --bubble-bg: rgba(255, 255, 255, 0.86);
+    --card-bg: rgba(0, 0, 0, 0.3);
+    --bubble-bg: rgba(0, 0, 0, 0.3);
+    --glass-edge: rgba(255, 255, 255, 0.18);
+    --text: #ffffff;
+    --text-rgb: 255 255 255;
+    --text-muted: #e8eef4;
+    --text-muted-rgb: 232 238 244;
+    color: var(--text); /* inherited text (e.g. the place name) must follow, not the body's */
   }
-  /* the Places drawer slides over the busy map: frosted, but more solid */
+  .heat-bg .glass-card,
+  .heat-bg .glass-bubble {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+  /* selected rail button: white with a dark icon, so it still stands out */
+  .heat-bg nav a[aria-current='page'] {
+    background: #ffffff;
+    color: #17212b;
+  }
+  .heat-bg nav a:not([aria-current='page']):hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+  }
+  /* the Places drawer slides over the busy map: frosted, but more solid, always dark text */
   #places-drawer {
     --card-bg: rgba(255, 255, 255, 0.72);
+    --glass-edge: rgba(255, 255, 255, 0.7);
+    --text: #17212b;
+    --text-rgb: 23 33 43;
+    --text-muted: #46525e;
+    --text-muted-rgb: 70 82 94;
+    color: var(--text);
   }
   /* phones: a lighter blur keeps scrolling smooth on cheaper devices */
   @media (max-width: 767px) {
