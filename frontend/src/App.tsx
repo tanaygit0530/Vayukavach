@@ -36,7 +36,12 @@ export default function App() {
         <Route path="reports" element={page(<ReportsPage />)} />
         <Route
           path="profile"
-          element={<Placeholder title="Profile" phase={12} note="Language and saved places." />}
+          element={
+            <Placeholder
+              title="Profile"
+              note="Saved places and a default language are planned. Alerts already let you choose English, हिंदी or मराठी."
+            />
+          }
         />
         <Route path="*" element={<RedirectKeepingQuery to="/air" />} />
       </Route>

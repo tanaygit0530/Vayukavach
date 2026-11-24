@@ -76,7 +76,30 @@ mindmap
 | **Heat Shield** | Heat index + wet-bulb, Normal → Extreme colour-by-danger page, safe work windows, NDMA tips | ✅ |
 | **Finder** | Cleaner-air and cooler places nearby, for a day trip or a vacation, with routes, travel time and official precautions | ✅ |
 | **Ask VayuKavach** | A chatbot that answers only from VayuKavach's data, with sources | ✅ |
-| **Alerts** | Telegram messages in Hindi, Marathi and English | ⏳ |
+| **Alerts** | WhatsApp, SMS (Twilio) and email (SMTP): 7 AM summary and instant Very poor / Severe / Danger alerts, in English, Hindi and Marathi, confirmed with a code, one-click stop | ✅ |
+| **Data reports** | Per city and day: completeness, silent stations, flagged hours, gap bias, station table, CSV download | ✅ |
+
+---
+
+## Diwali 2026, from our own data
+
+The same checks, run on the stored hourly station data for Delhi (CPCB/SPCB stations via OpenAQ):
+
+| | 8 Nov (Diwali) | 9 Nov (the morning after) |
+|---|:-:|:-:|
+| Expected hourly readings that arrived | 96% | 93% |
+| Readings missing in the **6 most polluted** hours | 20.3% | **42.6%** |
+| Readings missing in the 6 cleanest hours | 2.4% | 3.6% |
+| *Missing when it mattered* flag (20+ points apart) | no (17.9) | **yes (39.0)** |
+| PM readings at or near the 999 µg/m³ cut-off | 16 | 19 |
+| AQI from the readings that arrived | 376 | 320 |
+| Shadow AQI (missing hours estimated) | 380 (378–381) | **340 (336–342)** |
+
+<img src="docs/screenshots/report-diwali.jpg" alt="Data report for Delhi on 9 November 2026: 93% complete, 42.6% of readings missing in polluted hours vs 3.6% in clean hours, flagged; four silent stations and 19 readings near the 999 cut-off" width="100%" />
+
+Across 10 cities and 28 days (25 Oct – 21 Nov), **8 city-days** were flagged, including Delhi on
+3, 4 and 9 Nov and Mumbai on 27 Oct, 3 and 4 Nov. The report describes completeness only; it
+does not say why readings were missing.
 
 ---
 
@@ -111,6 +134,18 @@ mindmap
 <td><sub><b>Hourly AQI</b>: solid = CPCB official, dashed outline = official reading missing (shadow estimate in the tooltip), faded = forecast.</sub></td>
 <td><sub><b>Pollutants</b>: 24-hour values and India AQI sub-index; CO₂ as context only.</sub></td>
 </tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/ask.jpg" alt="Ask VayuKavach: an answer with source chips and a refusal for an off-topic question" /></td>
+</tr>
+<tr>
+<td colspan="2"><sub><b>Ask VayuKavach</b>: answers only from VayuKavach's data, with a source chip (source · time · Measured/Estimated) under every answer; off-topic questions get a polite refusal and never reach the model.</sub></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/alerts.jpg" alt="Alerts sign-up: WhatsApp, SMS or email, language, daily and instant options, and a sample morning message in Hindi" /></td>
+</tr>
+<tr>
+<td colspan="2"><sub><b>Alerts</b>: sign up on WhatsApp, SMS or email; the sample is today's real 7 AM message. Every number in a message carries its source, time and label.</sub></td>
+</tr>
 </table>
 
 ---
@@ -141,8 +176,11 @@ flowchart LR
     HEAT["Heat index<br/>+ wet-bulb"]
   end
 
-  API["FastAPI<br/>/api/v1 · 22 endpoints"]
-  UI["React + Leaflet<br/>Air · Temperature · Heat"]
+  API["FastAPI<br/>/api/v1 · 28 endpoints"]
+  UI["React + Leaflet<br/>Air · Temperature · Heat<br/>Finder · Ask · Alerts · Reports"]
+  LLM["Gemini 2.5 Flash<br/><i>may only call our tools</i>"]
+  ALR["Alerts job<br/>hourly + 7 AM"]
+  OUT["Email (SMTP)<br/>SMS · WhatsApp (Twilio)"]
 
   CPCB --> MAC
   OAQ --> GHA
@@ -152,6 +190,8 @@ flowchart LR
   GHA --> DB
   DB --> AN --> DB
   DB --> API --> UI
+  API <--> LLM
+  DB --> ALR --> OUT
 ```
 
 **Why CPCB runs on a Mac:** data.gov.in refuses connections from GitHub's US servers (`Connection refused`,
@@ -201,6 +241,25 @@ flowchart TD
 | **City-wide silence** | hours when 25%+ of a city's stations were silent together |
 | **Missing when it mattered** | missing rate in the 6 most polluted hours − missing rate in the 6 cleanest; flag at **20 points** |
 | **Near the 999 cut-off** | PM readings ≥ 950 µg/m³; CPCB drops ≥ 999 from the AQI |
+
+### How well does it work? Measured, including where it falls short
+
+Hold-out test on 30 days of real station data in 9 cities
+([full report](docs/validation/shadow_holdout.md), `backend/scripts/validate_shadow.py`):
+
+| Test | Leaving the gaps out | Shadow estimate | Ratio-scaled prototype |
+|---|:-:|:-:|:-:|
+| Single hidden PM2.5 reading (8,025 readings) | – | 29.9 µg/m³ (32% of the level); a plain city average does as well (29.3) | – |
+| City PM2.5 index, **random** gaps (250 city-days) | **1.1** AQI points | 3.6 | 2.2 |
+| City PM2.5 index, **Diwali-style** gaps: the most polluted third of stations silent in the 6 worst hours | 10.7, **reads too clean** | 9.8 | **7.1** |
+
+What this means:
+- When gaps are random, the official average is already fine and filling only adds noise.
+- When the most polluted stations go silent, leaving them out reads about 11 AQI points too
+  clean. The shipped method recovers only 8% of that, because cleaner neighbours stand in for
+  the silent stations.
+- A prototype that scales each station by its usual ratio to the rest of the city that day
+  recovers 34%. It is tested but not in the app yet.
 
 ---
 
@@ -282,6 +341,19 @@ flowchart LR
 
 ---
 
+## Tested
+
+| What | Result |
+|---|---|
+| Backend (pytest) | 277 tests; **94% coverage** on analysis, forecast, heat and alerts code (CI fails below 80%) |
+| Collectors (pytest) | 60 tests, recorded API responses, no live calls |
+| Frontend (Vitest + Testing Library) | 46 tests: every tab, loading / no-data / estimated / stale states |
+| End to end (Playwright) | 6 journeys on desktop and a phone, against a seeded API replaying Diwali: switch tabs, Places drawer, chart tabs, chatbot, data report + CSV, alerts |
+| Lighthouse, Air tab | Phone: performance **82**, accessibility **100**. Desktop: performance **96**, accessibility **100**, SEO 100 |
+| Chatbot | 50-question evaluation in English, Hindi and Marathi: out-of-scope, medical, politics, cities not covered, dates with no data |
+
+---
+
 ## Tech stack
 
 | Layer | Tools |
@@ -290,8 +362,11 @@ flowchart LR
 | Database | PostgreSQL on Supabase (free tier), SQLAlchemy 2 + Alembic, row level security |
 | Analysis & ML | pandas, NumPy, LightGBM (quantile + bias-correction models), scikit-learn: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
 | API | FastAPI, Pydantic models, TTL cache, per-IP rate limit, OpenAPI docs |
+| AI | Gemini 2.5 Flash with function calling (only VayuKavach's tools), Ollama fallback, a rules engine when neither is available |
+| Alerts | Python `smtplib` (email), Twilio REST API (SMS, WhatsApp), templates in en / hi / mr |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
-| Quality | pytest (227 tests), Vitest (37) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
+| Quality | pytest (337 tests), Vitest (46) + Testing Library, Playwright e2e (desktop + phone), Lighthouse, coverage gate, ruff, ESLint, CI on every push |
+| Hosting | Vercel (frontend), Render (API), Supabase (database), GitHub Actions (collectors, deploy after CI, uptime check every 10 min) |
 
 ---
 
@@ -299,11 +374,11 @@ flowchart LR
 
 ```text
 VayuKavach/
-├── backend/            FastAPI app, models, Alembic migrations, analysis/ (AQI, shadow, heat…), tests
+├── backend/            FastAPI app, models, migrations, analysis/, forecast/, chat/, alerts/, scripts/, tests
 ├── jobs/               Hourly collectors (CPCB, OpenAQ, Open-Meteo), run.py, launchd installer, tests
-├── frontend/           React app: shell, Air tab, Temperature tab, shared UI, tests
+├── frontend/           React app: shell, every tab, shared UI, Vitest tests, e2e/ (Playwright, Lighthouse)
 ├── docs/               Spec, build plan, progress log, validation report, design references
-└── .github/workflows/  CI (lint + tests) and hourly collection
+└── .github/workflows/  CI, hourly collection, nightly forecast, deploy after CI, uptime check
 ```
 
 ---
@@ -320,9 +395,33 @@ uv run uvicorn app.main:app --reload             # API → http://localhost:8000
 cd ../jobs && uv sync && uv run python run.py hourly   # collect once
 
 cd ../frontend && npm install && npm run dev     # app → http://localhost:5180
+npm run e2e                                      # Playwright on a seeded copy (Diwali replay)
+npm run lighthouse                               # Lighthouse thresholds on the Air tab
 ```
 
+Optional keys in `.env`: `GEMINI_API_KEY` (chatbot), `SMTP_*` and `TWILIO_*` (alerts).
+Deployment (Render + Vercel + GitHub settings): [docs/DEPLOY.md](docs/DEPLOY.md).
+A 3-minute demo walk-through: [docs/DEMO.md](docs/DEMO.md).
+
 Developer details (collectors, storage, hosting, API notes): [docs/README.md](docs/README.md)
+
+---
+
+## Limitations
+
+- **Shadow AQI** recovers only part of the AQI hidden by Diwali-style gaps (see the measured
+  results above); a better method is tested but not shipped.
+- **Coverage:** 10 districts. Stations come from CPCB and OpenAQ only; low-cost sensors are not used.
+- **CPCB history** starts on 22 Nov 2026, when collection began (the feed is a live snapshot);
+  OpenAQ hourly data goes back to 24 Oct 2026 and daily data to Jan 2025.
+- **Pollution sources:** IITM's Decision Support System has no terms of use, so Delhi's daily
+  values are entered by hand; other cities use 2018 APnA studies.
+- **Heat:** no satellite land-surface temperature yet, so park- and lake-level cooling is not shown.
+- **Alerts:** WhatsApp runs on Twilio's sandbox (each person joins first). SMS to any Indian
+  number needs DLT registration.
+- **Free hosting:** Render's free plan sleeps without traffic (the uptime check keeps it
+  awake), Gemini's free tier is rate-limited (the template engine answers then), and GitHub's
+  hourly schedule is unreliable, so a Mac in India also triggers collection.
 
 ---
 

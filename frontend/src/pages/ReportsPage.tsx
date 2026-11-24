@@ -175,7 +175,7 @@ export function ReportsPage() {
                           <span className="tabular-nums text-ink-muted">{hhmm(h)}</span>
                         </li>
                       ))}
-                      {r.readings_near_limit.map((x, i) => (
+                      {[...r.readings_near_limit].sort((a, b) => a.hour.localeCompare(b.hour)).map((x, i) => (
                         <li key={`n${i}`} className="flex justify-between gap-3 py-2">
                           <span>
                             {x.name ?? `Station ${x.station_id}`}: {POLLUTANT[x.pollutant] ?? x.pollutant} {x.value ?? '—'}

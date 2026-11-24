@@ -513,4 +513,78 @@ Tests: backend 227, jobs 60, frontend 40.
 - Found during live checks: Gemini once asked the forecast for 1 day and called today
   "tomorrow". Fixed by always returning today and tomorrow, with relative day labels.
 
-**Next:** Phase 12, alerts (Twilio WhatsApp/SMS, email), testing, deployment and demo.
+**Next:** Phase 12, alerts (Twilio WhatsApp/SMS, email), testing, deployment and demo (below).
+
+## Phase 12: Alerts, testing, deployment and demo — built; going live needs accounts (2026-11-24)
+
+Alerts use WhatsApp and SMS (Twilio) and email (Python SMTP) instead of Telegram, as decided
+on 2026-11-24.
+
+**Built**
+- **Alerts** (`app/alerts/`, migration 0010, RLS on):
+  - Sign-up on `/alerts`: channel, number or email, language, daily and/or instant. A 6-digit
+    code is sent (stored hashed, 15 min, 5 tries, resend after 60 s); one-click stop link in
+    every message.
+  - Hourly `alerts` job (cloud and Mac groups):
+    - 7 AM IST summary, sent once between 07:00 and 11:00;
+    - instant alerts on entering Very poor/Severe AQI (re-arm at Moderate) and Danger/Extreme
+      heat (re-arm at Normal);
+    - no instant alerts 22:00–06:00; row locks so two runners never double-send;
+    - collector-failure notice to the admin after 2 failed runs, once per streak.
+  - Messages come from templates in en/hi/mr, with source, time and Measured/Estimated on
+    every number. No message text or addresses are logged.
+- **Data reports** (`/reports`):
+  - completeness, silent stations, city-wide silent hours, PM readings near 999, the gap-bias
+    check, the station table (below 75% or all) and CSV download;
+  - linked from the Air tab's completeness bubble.
+- **Testing:**
+  - Playwright end-to-end on desktop and phone: tabs, Places drawer, chart tabs, chatbot,
+    report + CSV, alerts. Runs against a seeded `*_e2e` database with `REPLAY_NOW`.
+  - Lighthouse script with thresholds.
+  - CI: an 80% coverage gate, plus an e2e job.
+  - Nightly forecast job tested end to end.
+- **Performance and accessibility:**
+  - code-split pages and Leaflet (main bundle 574 → 291 kB);
+  - fonts no longer block rendering;
+  - closed drawer made `inert`; link contrast fixed; robots.txt and meta description added;
+  - Alerts and Profile added to the phone bar.
+- **Deployment:**
+  - `render.yaml` (API), `frontend/vercel.json`;
+  - `deploy.yml` (Render deploy hook only after CI passes on main, then waits for /health);
+  - `uptime.yml` (every 10 min; operator notice through the alert channels);
+  - `docs/DEPLOY.md`.
+- **Results and demo:**
+  - `scripts/validate_shadow.py` → `docs/validation/shadow_holdout.md`;
+  - daily summaries backfilled for 25 Oct – 21 Nov (280 city-days) so the reports cover
+    Diwali;
+  - README: Diwali section, measured shadow-AQI results, testing, limitations;
+  - `docs/DEMO.md` (3 minutes).
+
+**Fixes found on the way**
+- **Data report:** counted unsettled hours (under 2 h old) as silent, unlike the day summary.
+  It now uses the same cut-off.
+- **Rate limits:** were keyed on the first X-Forwarded-For entry, which a client can forge.
+  They now use the entry the proxy adds.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| App live on a public link | **Not yet**: needs your Render and Vercel accounts (steps in docs/DEPLOY.md) |
+| Alerts arrive | **Not yet tested live**: needs SMTP and Twilio credentials. Delivery, de-duplication, quiet hours and failure logging are covered by tests with fake senders |
+| All tests pass | Pass: backend 277 (94% coverage on analysis/forecast/heat/alerts), jobs 60, frontend 46, Playwright 11 + 1 skipped (desktop + phone), CI green |
+| README shows real measured results | Pass: AQI vs CPCB, forecast backtest, shadow hold-out (30 days, 9 cities), Diwali 2026 from stored data |
+
+Lighthouse on the Air tab (production build):
+- Phone: performance 82, accessibility 100.
+- Desktop: performance 96, accessibility 100.
+- On GitHub's slower runners phone performance is about 63, so CI only warns there.
+
+**Known issues**
+- **Shadow AQI accuracy:**
+  - With Diwali-style gaps it cuts the "too clean" error by only 8% (10.7 → 9.8 AQI points).
+  - With random gaps it is worse than leaving the gaps out (3.6 vs 1.1).
+  - A ratio-scaled prototype does better (7.1 and 2.2); it is not in the app (decision pending).
+- **Replay:** the Diwali replay via `REPLAY_NOW` works on the synthetic e2e seed. On real data
+  only reports work for past days: no stored weather, CAMS or CPCB for October and early
+  November.
+- **Profile page** is still a placeholder.
