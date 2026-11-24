@@ -1,0 +1,46 @@
+name: Deploy
+
+# Ship the API only after CI passes on main. The frontend deploys through Vercel's Git
+# integration (it builds the same commit); set VERCEL_DEPLOY_HOOK_URL to trigger it from here
+# instead.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+      API_URL: ${{ vars.PUBLIC_API_URL }}
+    steps:
+      - name: Deploy API (Render)
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null && echo "Render deploy started"
+      - name: Deploy frontend (Vercel hook, optional)
+        if: env.VERCEL_DEPLOY_HOOK_URL != ''
+        run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL" > /dev/null && echo "Vercel deploy started"
+      - name: Wait for the API to be healthy
+        if: env.API_URL != '' && env.RENDER_DEPLOY_HOOK_URL != ''
+        run: |
+          sleep 60
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 60 "$API_URL/health" | grep -q '"database":"ok"'; then
+              echo "API healthy"; exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::API did not become healthy after deploy"; exit 1
+      - name: Nothing configured
+        if: env.RENDER_DEPLOY_HOOK_URL == '' && env.VERCEL_DEPLOY_HOOK_URL == ''
+        run: echo "::notice::No deploy hooks set (RENDER_DEPLOY_HOOK_URL / VERCEL_DEPLOY_HOOK_URL); skipping."

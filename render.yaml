@@ -1,0 +1,48 @@
+# Render Blueprint: the VayuKavach API (FastAPI). Database: Supabase (DATABASE_URL secret).
+# Deploys are triggered by .github/workflows/deploy.yml after CI passes on main.
+services:
+  - type: web
+    name: vayukavach-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    region: singapore
+    buildCommand: pip install uv && uv sync --locked --no-dev
+    startCommand: uv run --no-dev alembic upgrade head && uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: DATABASE_URL # Supabase session pooler URL, postgresql+psycopg://...
+        sync: false
+      - key: FRONTEND_ORIGIN # e.g. https://vayukavach.vercel.app
+        sync: false
+      - key: PUBLIC_API_URL # this service's URL, for alert stop links
+        sync: false
+      - key: DATA_GOV_IN_API_KEY
+        sync: false
+      - key: OPENAQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_SMS_FROM
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: TWILIO_WHATSAPP_JOIN
+        sync: false

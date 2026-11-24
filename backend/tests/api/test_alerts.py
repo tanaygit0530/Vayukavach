@@ -403,3 +403,30 @@ def test_admin_hears_once_when_a_collector_fails_twice(session, configured, monk
     session.add(FetchLog(source="cpcb", status="ok", started_at=now + timedelta(minutes=30)))
     session.commit()
     assert service.collector_failures(session, sender, now + timedelta(hours=2)) == []
+
+
+def test_rate_limit_key_ignores_forged_forwarded_for():
+    from starlette.requests import Request
+
+    from app.api.limits import client_key
+
+    def req(xff: str | None):
+        headers = [(b"x-forwarded-for", xff.encode())] if xff else []
+        return Request({"type": "http", "headers": headers, "client": ("10.0.0.9", 1)})
+
+    assert client_key(req("1.2.3.4, 203.0.113.7")) == "203.0.113.7"  # added by the proxy
+    assert client_key(req(None)) == "10.0.0.9"
+
+
+def test_operator_notice_goes_to_admin_targets(configured, monkeypatch):
+    from app.alerts.notify import notify
+
+    monkeypatch.setenv("ADMIN_EMAIL", "ops@example.com")
+    monkeypatch.setenv("ADMIN_PHONE", "98765 43210")
+    get_settings.cache_clear()
+    sender = FakeSender()
+    assert notify("API down", sender) == 2
+    assert {(c, to) for c, to, *_ in sender.sent} == {
+        ("email", "ops@example.com"),
+        ("whatsapp", "+919876543210"),
+    }

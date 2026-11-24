@@ -9,6 +9,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from app.api.limits import client_key
+
 EXEMPT = ("/health", "/docs", "/openapi.json", "/redoc")
 
 
@@ -34,9 +36,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.url.path.startswith(EXEMPT):
             return await call_next(request)
-        client = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
-            request.client.host if request.client else "unknown"
-        )
+        client = client_key(request)
         if not self.allow(client):
             return JSONResponse(
                 {"detail": "Too many requests. Please slow down."},

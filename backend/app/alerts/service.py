@@ -263,16 +263,24 @@ def run(session: Session, sender, now: datetime) -> RunResult:
     return result
 
 
-def collector_failures(session: Session, sender, now: datetime) -> list[str]:
-    """Tell the admin once per failure streak when a collector's last two runs failed."""
+def admin_targets() -> list[tuple[str, str]]:
+    """(channel, address) pairs for operator notices: ADMIN_EMAIL and/or ADMIN_PHONE
+    (WhatsApp when set up, else SMS)."""
     s = get_settings()
     targets = []
     if s.admin_email and available()["email"]:
         targets.append(("email", s.admin_email))
     if s.admin_phone:
         phone_channel = "whatsapp" if available()["whatsapp"] else "sms"
-        if available()[phone_channel]:
-            targets.append((phone_channel, normalise_address(phone_channel, s.admin_phone)))
+        phone = normalise_address(phone_channel, s.admin_phone)
+        if available()[phone_channel] and phone:
+            targets.append((phone_channel, phone))
+    return targets
+
+
+def collector_failures(session: Session, sender, now: datetime) -> list[str]:
+    """Tell the admin once per failure streak when a collector's last two runs failed."""
+    targets = admin_targets()
     if not targets:
         return []
     alerted = []

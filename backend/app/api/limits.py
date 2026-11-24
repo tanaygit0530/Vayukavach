@@ -7,9 +7,13 @@ from fastapi import Request
 
 
 def client_key(request: Request) -> str:
-    return request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
-        request.client.host if request.client else "unknown"
-    )
+    """The caller's address. Behind Render's proxy the real one is the LAST X-Forwarded-For
+    entry (the proxy appends it); earlier entries come from the client and can be forged."""
+    forwarded = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",")]
+    forwarded = [p for p in forwarded if p]
+    if forwarded:
+        return forwarded[-1]
+    return request.client.host if request.client else "unknown"
 
 
 class Bucket:
