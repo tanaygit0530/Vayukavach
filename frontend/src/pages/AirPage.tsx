@@ -1,11 +1,10 @@
 import { Eye, Gauge, ShieldCheck, Wind } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { AqiChart } from '../components/air/AqiChart'
 import { HealthAdvice } from '../components/air/HealthAdvice'
 import { PollutantBars } from '../components/air/PollutantBars'
-import { PollutionMap } from '../components/air/PollutionMap'
 import { SourceList } from '../components/air/SourceList'
 import { WindCompass } from '../components/air/WindCompass'
 import { MetricBubble } from '../components/ui/MetricBubble'
@@ -13,6 +12,9 @@ import { aqiVar } from '../lib/aqi'
 import { POLLUTANT_NAMES } from '../lib/format'
 import { useAirNow, useDistricts } from '../lib/queries'
 import { useShell } from '../lib/shell'
+
+// Leaflet is the largest dependency: load it after the numbers are on screen.
+const PollutionMap = lazy(() => import('../components/air/PollutionMap').then((m) => ({ default: m.PollutionMap })))
 
 const KIND_TEXT = { official: 'CPCB', measured: 'Stations', cams: 'Model' } as const
 
@@ -92,7 +94,7 @@ function Bubbles({ place, size }: { place: string; size: 'desktop' | 'phone' }) 
               )}
               <Link
                 to={{ pathname: '/reports', search: `?place=${place}` }}
-                className="focus-ring mt-0.5 inline-block rounded text-accent underline-offset-2 hover:underline"
+                className="focus-ring mt-0.5 inline-block rounded font-medium text-ink underline underline-offset-2"
               >
                 Data report
               </Link>
@@ -132,7 +134,9 @@ export function AirPage() {
     <div className="flex flex-col gap-4">
       <h1 className="sr-only">Air quality in {district?.name ?? place}</h1>
       <section aria-label="Pollution map and current air quality" className="relative isolate">
-        <PollutionMap place={place} district={district} className="h-[360px] shadow-card md:h-[540px]" />
+        <Suspense fallback={<div className="h-[360px] rounded-card bg-slate-200/60 shadow-card md:h-[540px]" aria-label="Loading map" role="status" />}>
+          <PollutionMap place={place} district={district} className="h-[360px] shadow-card md:h-[540px]" />
+        </Suspense>
         <Bubbles place={place} size="desktop" />
       </section>
       <Bubbles place={place} size="phone" />

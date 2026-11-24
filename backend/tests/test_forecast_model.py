@@ -21,7 +21,12 @@ DAYS = 420
 
 
 def synthetic(seed=0):
-    """CAMS reads 30% low and misses a wind effect; AQI has a smooth season + persistence."""
+    return build_frame(*synthetic_tables(seed))
+
+
+def synthetic_tables(seed=0):
+    """CAMS reads 30% low and misses a wind effect; AQI has a smooth season + persistence.
+    Returns (city daily targets, district daily features)."""
     rng = np.random.default_rng(seed)
     feats, targets = [], []
     for d_id in (1, 2):
@@ -66,7 +71,7 @@ def synthetic(seed=0):
     from app.forecast.model import aqi_of
 
     t["aqi"] = [aqi_of(r) for r in t.to_dict("records")]
-    return build_frame(t, pd.DataFrame(feats))
+    return t, pd.DataFrame(feats)
 
 
 @pytest.fixture(scope="module")

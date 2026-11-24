@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.analysis.time import IST
+from app.config import get_settings
 from app.db import SessionLocal
 from app.models import District
 
@@ -58,7 +59,8 @@ def get_session() -> Iterator[Session]:
 
 
 def get_now() -> datetime:
-    return datetime.now(UTC)
+    replay = get_settings().replay_now
+    return replay if replay is not None else datetime.now(UTC)
 
 
 _http: httpx.Client | None = None

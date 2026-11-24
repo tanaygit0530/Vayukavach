@@ -50,6 +50,7 @@ def _no_live_services(monkeypatch):
         "TWILIO_WHATSAPP_JOIN",
         "ADMIN_EMAIL",
         "ADMIN_PHONE",
+        "REPLAY_NOW",
     ):
         monkeypatch.setenv(key, "")
     get_settings.cache_clear()

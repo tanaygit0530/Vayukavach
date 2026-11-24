@@ -8,3 +8,7 @@ __pycache__/
 node_modules/
 dist/
 *.log
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/

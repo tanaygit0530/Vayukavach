@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.analysis.completeness import silence_report, silent_matrix
 from app.analysis.gap_bias import excluded_readings
-from app.analysis.summary import load_readings, load_reference_stations
+from app.analysis.summary import SETTLE_HOURS, load_readings, load_reference_stations
 from app.analysis.time import day_bounds
 from app.models import District
 from app.services.air import latest_summary
@@ -20,13 +20,16 @@ from app.services.air import latest_summary
 def gap_report(session: Session, district: District, day: date, now: datetime) -> dict:
     coords = load_reference_stations(session, district.id)
     start, end = day_bounds(day)
-    readings = load_readings(session, list(coords), start, min(end, now))
+    # same cut-off as the day summary: OpenAQ hours are only judged once they have settled,
+    # so a reading that is merely late is not reported as a silent station
+    settled = now - timedelta(hours=SETTLE_HOURS)
+    readings = load_readings(session, list(coords), start, min(end, settled))
     names = dict(
         session.execute(
             text("SELECT id, name FROM stations WHERE id = ANY(:ids)"), {"ids": list(coords)}
         ).all()
     )
-    silence = silence_report(silent_matrix(readings, day, now)) if not readings.empty else None
+    silence = silence_report(silent_matrix(readings, day, settled)) if not readings.empty else None
     per_station = (
         session.execute(
             text(

@@ -1,8 +1,10 @@
 """Application settings, read from environment variables or the repo-root .env file."""
 
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -41,6 +43,14 @@ class Settings(BaseSettings):
     admin_email: str = ""
     admin_phone: str = ""
     rate_limit_per_minute: int = 300  # one Air page load makes ~10 calls
+    # Replay: the API answers as if it were this moment (ISO time with zone). For end-to-end
+    # tests and demos on a stored day; never set it in production.
+    replay_now: datetime | None = None
+
+    @field_validator("replay_now", mode="before")
+    @classmethod
+    def _blank_is_off(cls, v):
+        return None if v in ("", None) else v
 
 
 @lru_cache

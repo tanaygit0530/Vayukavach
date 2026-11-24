@@ -31,7 +31,7 @@ export function IconRail({ place }: { place: string }) {
       className={clsx(
         'glass-card z-30 flex items-center',
         // phones: bottom bar
-        'fixed inset-x-3 bottom-3 h-[64px] justify-around rounded-[22px] px-2',
+        'fixed inset-x-3 bottom-3 h-[64px] justify-center gap-1 rounded-[22px] px-2',
         // tablet and up: left rail
         'md:static md:inset-auto md:h-full md:w-rail md:flex-col md:justify-start md:gap-0 md:rounded-card md:px-0 md:py-4',
       )}
@@ -46,7 +46,8 @@ export function IconRail({ place }: { place: string }) {
           </li>
         ))}
       </ul>
-      <ul className="hidden md:mt-auto md:flex md:flex-col md:gap-3">
+      {/* phones: Alerts and Profile sit at the end of the same bar */}
+      <ul className="flex items-center gap-1 md:mt-auto md:flex-col md:gap-3">
         {FOOTER_NAV.map((item) => (
           <li key={item.path}>
             <RailLink item={item} place={place} />

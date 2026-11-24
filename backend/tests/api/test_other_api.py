@@ -1,3 +1,4 @@
+from tests.analysis.helpers import DAY
 from tests.api.conftest import NOW, assert_meta
 
 
@@ -134,3 +135,35 @@ def test_heat_levels_follow_the_hottest_hours(client):
     hottest = max(body["hourly"], key=lambda h: h["heat_index"])
     order = ["normal", "caution", "danger", "extreme"]
     assert order.index(body["worst_level_today"]) >= order.index(hottest["level"])
+
+
+def test_replay_now_pins_the_api_clock(monkeypatch):
+    from datetime import UTC, datetime
+
+    from app.api.common import get_now
+    from app.config import get_settings
+
+    monkeypatch.setenv("REPLAY_NOW", "2026-11-08T20:30:00+05:30")
+    get_settings.cache_clear()
+    assert get_now() == datetime(2026, 11, 8, 15, 0, tzinfo=UTC)
+    monkeypatch.delenv("REPLAY_NOW")
+    get_settings.cache_clear()
+    assert abs((get_now() - datetime.now(UTC)).total_seconds()) < 5
+
+
+def test_e2e_seed_never_targets_a_hosted_database():
+    import pytest
+
+    from scripts.seed_e2e import e2e_url
+
+    assert e2e_url("postgresql+psycopg://u:p@localhost:5433/vayukavach").endswith("/vayukavach_e2e")
+    with pytest.raises(SystemExit):
+        e2e_url("postgresql+psycopg://u:p@aws-1-x.pooler.supabase.com:5432/postgres")
+
+
+def test_gap_report_does_not_call_unsettled_hours_silent(client):
+    """At 20:30 IST the two stations that stopped at 18:00 are only ~2 h late: OpenAQ may still
+    deliver those hours, so neither the city summary nor the report may count them yet."""
+    body = client.get("/api/v1/reports/delhi/gaps", params={"date": str(DAY)}).json()
+    assert body["completeness_pct"] == 100.0
+    assert body["city_silent_hours"] == [] and body["silent_stations"] == []

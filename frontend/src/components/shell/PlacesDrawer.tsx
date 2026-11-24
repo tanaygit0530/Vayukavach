@@ -78,6 +78,8 @@ export function PlacesDrawer({ open, place, onClose, onChoose }: Props) {
     <div
       className={clsx('fixed inset-0 z-[1000]', open ? 'pointer-events-auto' : 'pointer-events-none')}
       aria-hidden={!open}
+      // closed: keep the slide-out animation but take its buttons out of the tab order
+      inert={!open}
     >
       <div
         data-testid="drawer-backdrop"
