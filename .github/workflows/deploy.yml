@@ -1,8 +1,7 @@
 name: Deploy
 
-# Ship the API only after CI passes on main. The frontend deploys through Vercel's Git
-# integration (it builds the same commit); set VERCEL_DEPLOY_HOOK_URL to trigger it from here
-# instead.
+# Ship only after CI passes on main: the API through Render's API, the frontend with the
+# Vercel CLI (the Vercel project is not linked to GitHub, so this is its only deploy path).
 on:
   workflow_run:
     workflows: [CI]
@@ -20,18 +19,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-      VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: srv-dc2leps0916s73ag5ht0
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_3mAKb4Z5KXf4EmbdwpUigwLL
+      VERCEL_PROJECT_ID: prj_d6ohWvHodRhAaRSi5pMdJqe9jpfk
       API_URL: ${{ vars.PUBLIC_API_URL }}
     steps:
+      - uses: actions/checkout@v4
+        if: env.VERCEL_TOKEN != ''
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Deploy API (Render)
-        if: env.RENDER_DEPLOY_HOOK_URL != ''
-        run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null && echo "Render deploy started"
-      - name: Deploy frontend (Vercel hook, optional)
-        if: env.VERCEL_DEPLOY_HOOK_URL != ''
-        run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL" > /dev/null && echo "Vercel deploy started"
+        if: env.RENDER_API_KEY != ''
+        run: |
+          curl -fsS -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' > /dev/null && echo "Render deploy started"
+      - name: Deploy frontend (Vercel)
+        if: env.VERCEL_TOKEN != ''
+        working-directory: frontend
+        run: npx --yes vercel@66 deploy --prod --yes --token "$VERCEL_TOKEN"
       - name: Wait for the API to be healthy
-        if: env.API_URL != '' && env.RENDER_DEPLOY_HOOK_URL != ''
+        if: env.API_URL != '' && env.RENDER_API_KEY != ''
         run: |
           sleep 60
           for i in $(seq 1 30); do
@@ -42,5 +52,5 @@ jobs:
           done
           echo "::error::API did not become healthy after deploy"; exit 1
       - name: Nothing configured
-        if: env.RENDER_DEPLOY_HOOK_URL == '' && env.VERCEL_DEPLOY_HOOK_URL == ''
-        run: echo "::notice::No deploy hooks set (RENDER_DEPLOY_HOOK_URL / VERCEL_DEPLOY_HOOK_URL); skipping."
+        if: env.RENDER_API_KEY == '' && env.VERCEL_TOKEN == ''
+        run: echo "::notice::No RENDER_API_KEY or VERCEL_TOKEN secret; skipping."

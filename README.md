@@ -9,6 +9,9 @@
 **Sameer tells you the AQI. VayuKavach tells you whether you can trust it, and what to do about it,**
 **every season, in every district.**
 
+**[Open the live app →](https://vayukavach-liart.vercel.app)** · [API docs](https://vayukavach-api.onrender.com/docs)
+<sub>(free hosting: the first visit after a quiet hour can take about a minute to wake the API)</sub>
+
 [![CI](https://github.com/tanaygit0530/Vayukavach/actions/workflows/ci.yml/badge.svg)](https://github.com/tanaygit0530/Vayukavach/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
@@ -366,7 +369,7 @@ flowchart LR
 | Alerts | Python `smtplib` (email), Twilio REST API (SMS, WhatsApp), templates in en / hi / mr |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
 | Quality | pytest (337 tests), Vitest (46) + Testing Library, Playwright e2e (desktop + phone), Lighthouse, coverage gate, ruff, ESLint, CI on every push |
-| Hosting | Vercel (frontend), Render (API), Supabase (database), GitHub Actions (collectors, deploy after CI, uptime check every 10 min) |
+| Hosting | Vercel (frontend), Render (API), Supabase (database), GitHub Actions (collectors, deploy after CI, hourly uptime check) |
 
 ---
 
@@ -419,8 +422,8 @@ Developer details (collectors, storage, hosting, API notes): [docs/README.md](do
 - **Heat:** no satellite land-surface temperature yet, so park- and lake-level cooling is not shown.
 - **Alerts:** WhatsApp runs on Twilio's sandbox (each person joins first). SMS to any Indian
   number needs DLT registration.
-- **Free hosting:** Render's free plan sleeps without traffic (the uptime check keeps it
-  awake), Gemini's free tier is rate-limited (the template engine answers then), and GitHub's
+- **Free hosting:** Render's free plan sleeps without traffic (the first visit then
+  waits about a minute), Gemini's free tier is rate-limited (the template engine answers then), and GitHub's
   hourly schedule is unreliable, so a Mac in India also triggers collection.
 
 ---

@@ -7,7 +7,7 @@
 | Frontend | Vercel, root directory `frontend` | `frontend/vercel.json` |
 | Collectors | GitHub Actions + the Mac launchd job (CPCB) | `.github/workflows/collect-hourly.yml` |
 | Deploy on main | GitHub Actions, after CI passes | `.github/workflows/deploy.yml` |
-| Uptime | GitHub Actions, every 10 min | `.github/workflows/uptime.yml` |
+| Uptime | GitHub Actions, hourly | `.github/workflows/uptime.yml` |
 
 ## 1. API on Render
 
@@ -19,11 +19,12 @@
    - `PUBLIC_API_URL`: this service's own URL, e.g. `https://vayukavach-api.onrender.com`
    - `DATA_GOV_IN_API_KEY`, `OPENAQ_API_KEY`, `GEMINI_API_KEY`
    - Alerts (optional): `SMTP_*`, `TWILIO_*`
-3. Settings → Deploy Hook → copy the URL.
+3. Account Settings → API Keys: a key with access to services (for deploys from GitHub).
 4. Check `https://<service>.onrender.com/health` shows `"database":"ok"`.
 
-The free plan sleeps after 15 minutes without traffic; the uptime check (every 10 minutes)
-keeps it awake, and one always-on service fits in the free 750 hours a month.
+The free plan sleeps after 15 minutes without traffic, and the first request after that waits
+about a minute. The free 750 hours a month are shared by every service in the Render workspace,
+so the uptime check runs hourly instead of keeping the API awake around the clock.
 
 ## 2. Frontend on Vercel
 
@@ -40,7 +41,7 @@ Repository → Settings → Secrets and variables → Actions.
 
 | Name | Type | Used by |
 | --- | --- | --- |
-| `RENDER_DEPLOY_HOOK_URL` | secret | deploy after CI |
+| `RENDER_API_KEY`, `VERCEL_TOKEN` | secret | deploy after CI (API via Render's API, frontend via the Vercel CLI) |
 | `PUBLIC_API_URL` | variable | deploy health wait, uptime, alert stop links |
 | `DATABASE_URL`, `DATA_GOV_IN_API_KEY`, `OPENAQ_API_KEY` | secret | collectors (already set) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | secret | alerts, uptime notice |

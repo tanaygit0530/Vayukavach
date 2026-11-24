@@ -1,11 +1,12 @@
 name: Uptime
 
-# Every 10 minutes: /health must answer with the database reachable. A cold start on Render's
-# free plan takes up to ~1 minute, so each check retries before calling it down. When down,
+# Every hour: /health must answer with the database reachable. Hourly, not more often: Render's
+# free hours are shared by every service in the workspace, and pinging every 10 minutes would
+# keep this one awake all month. A cold start takes up to ~1 minute, so each check retries. When down,
 # the operator gets an email / WhatsApp / SMS through the app's own alert channels.
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 jobs:
