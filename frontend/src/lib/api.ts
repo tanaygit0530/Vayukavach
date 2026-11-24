@@ -309,3 +309,45 @@ export interface Sources extends Meta {
   published_sum: number | null
   note: string | null
 }
+
+export type Goal = 'air' | 'heat'
+export type FinderMode = 'nearby' | 'daytrip' | 'vacation'
+
+export interface FinderPlace {
+  id: string
+  name: string
+  state: string | null
+  lat: number
+  lon: number
+  kind: 'station' | 'town' | 'hill_station'
+  distance_km: number
+  approx_minutes: number
+  value: number
+  unit: string
+  value_label: 'measured' | 'estimated'
+  value_source: string
+  category: string | null
+  category_key: string | null
+  forecast: { date: string; value: number }[]
+  forecast_label: string
+  better_by: number | null
+  score: number
+}
+
+export interface FinderResult extends Meta {
+  goal: Goal
+  mode: FinderMode
+  radius_km: number | null
+  origin: { name: string; lat: number; lon: number; value: number | null }
+  places: FinderPlace[]
+  precautions: { for: string; text: string; source: string }[]
+  empty_reason: string | null
+  note: string
+}
+
+export interface RouteResult extends Meta {
+  distance_km: number
+  duration_min: number
+  geometry: [number, number][]
+  maps_url: string
+}

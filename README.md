@@ -74,7 +74,7 @@ mindmap
 | **Pollution sources** | Share of PM2.5 by sector: IITM DSS daily for Delhi, APnA studies (2018) for 5 cities, honest empty state elsewhere | ✅ |
 | **Temperature tab** | Feels-like with a reason, 7 AM–7 PM trend, 10-day forecast, sun arc, UV gauge, CSV export | ✅ |
 | **Heat Shield** | Heat index + wet-bulb, Normal → Extreme colour-by-danger page, safe work windows, NDMA tips | ✅ |
-| **Finder** | Cleaner or cooler places with routes and precautions | ⏳ |
+| **Finder** | Cleaner-air and cooler places nearby, for a day trip or a vacation, with routes, travel time and official precautions | ✅ |
 | **Ask VayuKavach** | A chatbot that answers only from VayuKavach's data, with sources | ⏳ |
 | **Alerts** | Telegram messages in Hindi, Marathi and English | ⏳ |
 
@@ -96,6 +96,12 @@ mindmap
 </tr>
 <tr>
 <td colspan="2"><sub><b>Heat tab</b>: the whole page turns red at Danger. Big dot-matrix feels-like, the work-rest instruction, and a day arc where solid = safe hours and dotted = take care. (Danger shown with a test response; November data is Normal.)</sub></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/finder.jpg" alt="Finder: cleaner-air day trips from Delhi with a route to Kotputli" /></td>
+</tr>
+<tr>
+<td colspan="2"><sub><b>Finder</b>: from Delhi (AQI 234), day trips ranked by measured AQI and a 3-day outlook; the route to Kotputli (AQI 56) with official precautions and one-tap navigation.</sub></td>
 </tr>
 <tr>
 <td><img src="docs/screenshots/aqi-chart.jpg" alt="Hourly AQI chart with shadow estimates where official readings were missing" /></td>
@@ -135,7 +141,7 @@ flowchart LR
     HEAT["Heat index<br/>+ wet-bulb"]
   end
 
-  API["FastAPI<br/>/api/v1 · 19 endpoints"]
+  API["FastAPI<br/>/api/v1 · 22 endpoints"]
   UI["React + Leaflet<br/>Air · Temperature · Heat"]
 
   CPCB --> MAC
@@ -285,7 +291,7 @@ flowchart LR
 | Analysis & ML | pandas, NumPy, LightGBM (quantile + bias-correction models), scikit-learn: India AQI, completeness, gap bias, shadow AQI, heat index (NWS), wet-bulb (Stull 2011) |
 | API | FastAPI, Pydantic models, TTL cache, per-IP rate limit, OpenAPI docs |
 | Frontend | React 19, Vite, TypeScript, Tailwind, React Router, TanStack Query, Leaflet + OpenStreetMap, hand-made SVG charts |
-| Quality | pytest (219 tests), Vitest (33) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
+| Quality | pytest (228 tests), Vitest (37) + Testing Library, Playwright screenshots, ruff, ESLint, CI on every push |
 
 ---
 
@@ -340,8 +346,8 @@ gantt
   section Features
   8 AQI forecasts days 1-10      :done, 2026-11-23, 1d
   9 Pollution sources            :done, 2026-11-24, 1d
-  10 Clean air and cool finder   :active, 2026-11-24, 2d
-  11 Ask VayuKavach chatbot      :2026-11-30, 2d
+  10 Clean air and cool finder   :done, 2026-11-24, 1d
+  11 Ask VayuKavach chatbot      :active, 2026-11-25, 2d
   12 Alerts, tests, deploy       :2026-12-02, 2d
 ```
 

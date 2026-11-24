@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     openaq_api_key: str = ""
     gemini_api_key: str = ""
     telegram_bot_token: str = ""
+    ors_api_key: str = ""  # optional: OpenRouteService; without it routes use public OSRM
     frontend_origin: str = "http://localhost:5180"
     rate_limit_per_minute: int = 300  # one Air page load makes ~10 calls
 

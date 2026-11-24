@@ -433,4 +433,45 @@ Tests: backend 159, jobs 60, frontend 33.
   no source data (there is no static Delhi study in the seed yet).
 - Studies are 2018 model estimates; they are labelled as such.
 
-**Next:** Phase 10, Clean Air and Cool Places Finder.
+
+## Phase 10: Clean Air and Cool Places Finder — complete (2026-11-24)
+
+**Built**
+- `GET /api/v1/finder?goal=air|heat&mode=nearby|daytrip|vacation&from=<district or lat,lon>`
+  (`app/services/finder.py`):
+  - Cleaner air: CPCB stations with a reading in the last 3 hours (≥ 3 pollutants incl. PM;
+    Measured), one entry per town for day trips/vacations (its cleanest station), only places
+    cleaner than here; 3-day CAMS outlook for the shortlist (Estimated); ranked by
+    0.6 × today + 0.4 × outlook.
+  - Cooler places: 28 hill stations (`app/data/hill_stations.csv`, coordinates from Open-Meteo
+    geocoding, same-name places resolved by highest elevation: e.g. Mahabaleshwar 1,377 m, not a
+    280 m namesake) + towns with CPCB stations; Open-Meteo 3-day "feels like" maxima; only places
+    ≥ 1 °C cooler; ranked by closeness to a comfortable band (18–27 °C), then distance, so a snowy
+    valley is not "best" in November.
+  - Nearby heat returns an empty state: park/lake cooling needs satellite land-surface
+    temperature, which VayuKavach does not have yet.
+  - Places without data are dropped, never shown.
+- `GET /api/v1/route?from=&to=`: OSRM public router (OpenRouteService when `ORS_API_KEY` is set),
+  cached 24 h; distance, time, line, Google Maps navigation link.
+- Precautions: CPCB health-impact wording (here and at the destination) or NDMA heat tips only.
+- Frontend `/finder`: Cleaner air / Cooler place, Nearby / Day trip / Vacation cards (radios),
+  "Use my location", ranked list (value chip, Measured/Estimated, ≈ travel time), map with start
+  pin, numbered pins and the route line, route card with distance, time, value, next days,
+  precautions and "Start navigation". Linked from the Air ("Find cleaner air") and Heat ("Find
+  cooler places") tabs.
+
+**Checks**
+| Done when | Result |
+| --- | --- |
+| Each mode returns real ranked places with labels | Pass (Chromium, live data): air nearby/day trip/vacation 10 each (e.g. Kotputli AQI 56 from Delhi 234); heat day trip 5 and vacation 10 from Mumbai; heat nearby shows the empty state |
+| Routes draw on the map | Pass: a route line in every mode (e.g. Delhi → Kotputli 167.8 km, 2 h 10 min) |
+| No unlabelled or data-less place appears | Pass: every listed place carries Measured/Estimated; API test drops a place whose forecast is empty |
+
+Tests: backend 168, jobs 60, frontend 37.
+
+**Known issues**
+- Rough list travel times assume 60 km/h; the route card shows the real time.
+- Air candidates are CPCB stations only (OpenAQ low-cost sensors are not used for suggestions).
+- Park- and lake-level cooling (satellite land-surface temperature) is future scope.
+
+**Next:** Phase 11, Ask VayuKavach chatbot.

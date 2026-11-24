@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 
 import { AppShell } from './components/shell/AppShell'
 import { AirPage } from './pages/AirPage'
+import { FinderPage } from './pages/FinderPage'
 import { HeatPage } from './pages/HeatPage'
 import { Placeholder } from './pages/Placeholder'
 import { TemperaturePage } from './pages/TemperaturePage'
@@ -19,10 +20,7 @@ export default function App() {
         <Route path="air" element={<AirPage />} />
         <Route path="temperature" element={<TemperaturePage />} />
         <Route path="heat" element={<HeatPage />} />
-        <Route
-          path="finder"
-          element={<Placeholder title="Maps and Finder" phase={10} note="Cleaner-air and cooler-places finder with routes." />}
-        />
+        <Route path="finder" element={<FinderPage />} />
         <Route
           path="ask"
           element={<Placeholder title="Ask VayuKavach" phase={11} note="Questions answered only from VayuKavach's data." />}

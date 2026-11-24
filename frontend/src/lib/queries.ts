@@ -8,7 +8,11 @@ import {
   type AirMonth,
   type AirNow,
   type Co2,
+  type FinderMode,
+  type FinderResult,
+  type Goal,
   type HeatReport,
+  type RouteResult,
   type Sources,
   type HeatSummary,
   type SunDay,
@@ -188,6 +192,24 @@ export function useSources(place: string) {
   return useQuery({
     queryKey: ['sources', place],
     queryFn: () => apiGet<Sources>(`/air/${place}/sources`),
+    staleTime: 60 * MINUTE,
+  })
+}
+
+export function useFinder(goal: Goal, mode: FinderMode, from: string) {
+  return useQuery({
+    queryKey: ['finder', goal, mode, from],
+    queryFn: () => apiGet<FinderResult>('/finder', { goal, mode, from }),
+    staleTime: 15 * MINUTE,
+  })
+}
+
+export function useRoute(from: [number, number] | null, to: [number, number] | null) {
+  return useQuery({
+    queryKey: ['route', from, to],
+    queryFn: () =>
+      apiGet<RouteResult>('/route', { from: `${from![0]},${from![1]}`, to: `${to![0]},${to![1]}` }),
+    enabled: !!from && !!to,
     staleTime: 60 * MINUTE,
   })
 }
